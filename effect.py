@@ -3,9 +3,9 @@ from basic import Timer
 
 
 class Effect:
-    def __init__(self, name: str, duration: float) -> None:
+    def __init__(self, name: str, duration: int) -> None:
         self.name: str = name
-        self.duration: float = duration
+        self.duration: int = duration
         self.type: str = ""
         self.remainTime: float = duration
 
@@ -14,18 +14,34 @@ class Effect:
 
 
 class Mitigation(Effect):
-    def __init__(self, name: str, duration: float, percentage: float) -> None:
-        super(Mitigation, self).__init__(name, duration)
+    def __init__(self, name: str, duration: int, percentage: float) -> None:
+        super().__init__(name, duration)
         self.percentage: float = percentage
         self.type = "Mitigation"
 
+class HealBonus(Effect):
+    def __init__(self, name: str, duration: int, percentage) -> None:
+        super().__init__(name, duration)
+        self.percentage = percentage
+        self.type = "HealBonus"
 
 class Dot(Effect):
-    def __init__(self, name: str, duration: float, damage: float) -> None:
-        super(Dot, self).__init__(name, duration)
+    def __init__(self, name: str, duration: int, damage: float) -> None:
+        super().__init__(name, duration)
         self.damage: float = damage
         self.timer: Timer = Timer(random() * 3)
         self.type = "Dot"
+
+    def update(self, timeInterval: float) -> bool:
+        super().update(timeInterval)
+        return self.timer.update()
+
+class Hot(Effect):
+    def __init__(self, name: str, duration: int, healing: float) -> None:
+        super().__init__(name, duration)
+        self.healing: float = healing
+        self.timer: Timer = Timer(random() * 3)
+        self.type = "Hot"
 
     def update(self, timeInterval: float) -> bool:
         super().update(timeInterval)
