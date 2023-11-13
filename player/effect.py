@@ -1,5 +1,16 @@
 from random import random
-from basic import Timer
+
+
+class Timer:
+    def __init__(self, initialTime: float = 0):
+        self.__time = initialTime
+
+    def update(self, time: float) -> bool:
+        self.__time += time
+        if self.__time >= 3:
+            self.__time -= 3
+            return True
+        return False
 
 
 class Effect:
@@ -19,11 +30,13 @@ class Mitigation(Effect):
         self.percentage: float = percentage
         self.type = "Mitigation"
 
+
 class HealBonus(Effect):
     def __init__(self, name: str, duration: int, percentage) -> None:
         super().__init__(name, duration)
         self.percentage = percentage
         self.type = "HealBonus"
+
 
 class Dot(Effect):
     def __init__(self, name: str, duration: int, damage: float) -> None:
@@ -35,6 +48,7 @@ class Dot(Effect):
     def update(self, timeInterval: float) -> bool:
         super().update(timeInterval)
         return self.timer.update()
+
 
 class Hot(Effect):
     def __init__(self, name: str, duration: int, healing: float) -> None:

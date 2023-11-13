@@ -1,0 +1,198 @@
+[
+    {
+        "label": "random",
+        "importPath": "random",
+        "description": "random",
+        "isExtraImport": true,
+        "detail": "random",
+        "documentation": {}
+    },
+    {
+        "label": "Effect",
+        "importPath": "effect",
+        "description": "effect",
+        "isExtraImport": true,
+        "detail": "effect",
+        "documentation": {}
+    },
+    {
+        "label": "Dot",
+        "importPath": "effect",
+        "description": "effect",
+        "isExtraImport": true,
+        "detail": "effect",
+        "documentation": {}
+    },
+    {
+        "label": "Hot",
+        "importPath": "effect",
+        "description": "effect",
+        "isExtraImport": true,
+        "detail": "effect",
+        "documentation": {}
+    },
+    {
+        "label": "HealBonus",
+        "importPath": "effect",
+        "description": "effect",
+        "isExtraImport": true,
+        "detail": "effect",
+        "documentation": {}
+    },
+    {
+        "label": "Mitigation",
+        "importPath": "effect",
+        "description": "effect",
+        "isExtraImport": true,
+        "detail": "effect",
+        "documentation": {}
+    },
+    {
+        "label": "Hot",
+        "importPath": "effect",
+        "description": "effect",
+        "isExtraImport": true,
+        "detail": "effect",
+        "documentation": {}
+    },
+    {
+        "label": "Dot",
+        "importPath": "effect",
+        "description": "effect",
+        "isExtraImport": true,
+        "detail": "effect",
+        "documentation": {}
+    },
+    {
+        "label": "reduce",
+        "importPath": "functools",
+        "description": "functools",
+        "isExtraImport": true,
+        "detail": "functools",
+        "documentation": {}
+    },
+    {
+        "label": "Player",
+        "importPath": "player",
+        "description": "player",
+        "isExtraImport": true,
+        "detail": "player",
+        "documentation": {}
+    },
+    {
+        "label": "Enum",
+        "importPath": "enum",
+        "description": "enum",
+        "isExtraImport": true,
+        "detail": "enum",
+        "documentation": {}
+    },
+    {
+        "label": "Timer",
+        "kind": 6,
+        "importPath": "player.effect",
+        "description": "player.effect",
+        "peekOfCode": "class Timer:\n    def __init__(self, initialTime: float = 0):\n        self.__time = initialTime\n    def update(self, time: float) -> bool:\n        self.__time += time\n        if self.__time >= 3:\n            self.__time -= 3\n            return True\n        return False\nclass Effect:",
+        "detail": "player.effect",
+        "documentation": {}
+    },
+    {
+        "label": "Effect",
+        "kind": 6,
+        "importPath": "player.effect",
+        "description": "player.effect",
+        "peekOfCode": "class Effect:\n    def __init__(self, name: str, duration: int) -> None:\n        self.name: str = name\n        self.duration: int = duration\n        self.type: str = \"\"\n        self.remainTime: float = duration\n    def update(self, timeInterval: float) -> None:\n        self.remainTime -= timeInterval\nclass Mitigation(Effect):\n    def __init__(self, name: str, duration: int, percentage: float) -> None:",
+        "detail": "player.effect",
+        "documentation": {}
+    },
+    {
+        "label": "Mitigation",
+        "kind": 6,
+        "importPath": "player.effect",
+        "description": "player.effect",
+        "peekOfCode": "class Mitigation(Effect):\n    def __init__(self, name: str, duration: int, percentage: float) -> None:\n        super().__init__(name, duration)\n        self.percentage: float = percentage\n        self.type = \"Mitigation\"\nclass HealBonus(Effect):\n    def __init__(self, name: str, duration: int, percentage) -> None:\n        super().__init__(name, duration)\n        self.percentage = percentage\n        self.type = \"HealBonus\"",
+        "detail": "player.effect",
+        "documentation": {}
+    },
+    {
+        "label": "HealBonus",
+        "kind": 6,
+        "importPath": "player.effect",
+        "description": "player.effect",
+        "peekOfCode": "class HealBonus(Effect):\n    def __init__(self, name: str, duration: int, percentage) -> None:\n        super().__init__(name, duration)\n        self.percentage = percentage\n        self.type = \"HealBonus\"\nclass Dot(Effect):\n    def __init__(self, name: str, duration: int, damage: float) -> None:\n        super().__init__(name, duration)\n        self.damage: float = damage\n        self.timer: Timer = Timer(random() * 3)",
+        "detail": "player.effect",
+        "documentation": {}
+    },
+    {
+        "label": "Dot",
+        "kind": 6,
+        "importPath": "player.effect",
+        "description": "player.effect",
+        "peekOfCode": "class Dot(Effect):\n    def __init__(self, name: str, duration: int, damage: float) -> None:\n        super().__init__(name, duration)\n        self.damage: float = damage\n        self.timer: Timer = Timer(random() * 3)\n        self.type = \"Dot\"\n    def update(self, timeInterval: float) -> bool:\n        super().update(timeInterval)\n        return self.timer.update()\nclass Hot(Effect):",
+        "detail": "player.effect",
+        "documentation": {}
+    },
+    {
+        "label": "Hot",
+        "kind": 6,
+        "importPath": "player.effect",
+        "description": "player.effect",
+        "peekOfCode": "class Hot(Effect):\n    def __init__(self, name: str, duration: int, healing: float) -> None:\n        super().__init__(name, duration)\n        self.healing: float = healing\n        self.timer: Timer = Timer(random() * 3)\n        self.type = \"Hot\"\n    def update(self, timeInterval: float) -> bool:\n        super().update(timeInterval)\n        return self.timer.update()",
+        "detail": "player.effect",
+        "documentation": {}
+    },
+    {
+        "label": "Player",
+        "kind": 6,
+        "importPath": "player.player",
+        "description": "player.player",
+        "peekOfCode": "class Player:\n    def __init__(self, name: str, hp: int) -> None:\n        self.name: str = name\n        self.maxHp: int = hp\n        self.hp: int = hp\n        self.shieldHp: int = 0\n        self.effectList: list[Effect] = []\n        self.isSurvival: bool = True\n    def getDamage(self, damage: int, fromEffect: bool = False) -> None:\n        realDamage = (",
+        "detail": "player.player",
+        "documentation": {}
+    },
+    {
+        "label": "PlayerList",
+        "kind": 6,
+        "importPath": "player.PlayerList",
+        "description": "player.PlayerList",
+        "peekOfCode": "class PlayerList:\n    ## 以仇恨值排序\n    playerList: list[Player] = []\n    @classmethod\n    def addPlayer(cls, player: Player) -> None:\n        cls.playerList.append(player)\n        player.getEffect(Hot(\"naturalHeal\", float(\"inf\"), player.maxHp // 100))\n    @classmethod\n    def getAOEHurt(cls, damage: int, dot: Dot | None = None) -> None:\n        for player in cls.playerList:",
+        "detail": "player.PlayerList",
+        "documentation": {}
+    },
+    {
+        "label": "DamageType",
+        "kind": 6,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "class DamageType(Enum):\n    PhysicsAoe = 0\n    MagicAoe = 1\n    PhysicsAA = 2\n    MagicAA = 3\nclass HealingType(Enum):\n    Hot = 0\n    Mitigation = 1\n    DirectHeal = 2\n    Shield = 3",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "HealingType",
+        "kind": 6,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "class HealingType(Enum):\n    Hot = 0\n    Mitigation = 1\n    DirectHeal = 2\n    Shield = 3\nclass DamageTimeLine:\n    # 格式为(伤害类型[aoe还是死刑还是aa], 数值, 伤害判定时间)\n    damageList: list[tuple(DamageType, int, float)] = []\n    def addMagicAoe(self, damage: int, time: float) -> None:\n        self.damageList.append((DamageType.MagicAoe, damage, time))",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "DamageTimeLine",
+        "kind": 6,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "class DamageTimeLine:\n    # 格式为(伤害类型[aoe还是死刑还是aa], 数值, 伤害判定时间)\n    damageList: list[tuple(DamageType, int, float)] = []\n    def addMagicAoe(self, damage: int, time: float) -> None:\n        self.damageList.append((DamageType.MagicAoe, damage, time))\n    def addPhysicsAoe(self, damage: int, time: float) -> None:\n        self.damageList.append((DamageType.PhysicsAoe, damage, time))\n    def addMagicAA(self, damage: int, time: float) -> None:\n        self.damageList.append((DamageType.MagicAA, damage, time))\n    def addPhysicsAA(self, damage: int, time: float) -> None:",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "HealingTimeLine",
+        "kind": 6,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "class HealingTimeLine:\n    healingList: list[tuple(DamageType, int, float)] = []\n    # def  add\nif __name__ == \"__main__\":\n    # PlayerList.addPlayer(Player(\"mt\", 120000))\n    # PlayerList.addPlayer(Player(\"st\", 120000))\n    # PlayerList.addPlayer(Player(\"h1\", 80000))\n    # PlayerList.addPlayer(Player(\"h2\", 80000))\n    # PlayerList.addPlayer(Player(\"d1\", 80000))\n    # PlayerList.addPlayer(Player(\"d2\", 80000))",
+        "detail": "main",
+        "documentation": {}
+    }
+]
