@@ -1,5 +1,6 @@
-from effect import Effect, Dot, Hot, HealBonus, Mitigation
+from playerPart.effect import Effect, Dot, Hot, HealBonus, Mitigation
 from functools import reduce
+
 
 class Player:
     def __init__(self, name: str, hp: int) -> None:
@@ -57,6 +58,7 @@ class Player:
         return reduce(
             lambda x, y: x * (y.percentage if type(y) == Mitigation else 1),
             self.effectList,
+            1,
         )
 
     @property
@@ -64,4 +66,5 @@ class Player:
         return reduce(
             lambda x, y: x * (y.percentage if type(y) == HealBonus else 1),
             self.effectList,
+            1,
         )

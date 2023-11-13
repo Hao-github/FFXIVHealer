@@ -1,5 +1,5 @@
 from enum import Enum
-# from player import Player, PlayerList
+from playerPart import Player, PlayerList
 
 
 class DamageType(Enum):
@@ -17,7 +17,7 @@ class HealingType(Enum):
 
 class DamageTimeLine:
     # 格式为(伤害类型[aoe还是死刑还是aa], 数值, 伤害判定时间)
-    damageList: list[tuple(DamageType, int, float)] = []
+    damageList: list[tuple[DamageType, int, float]] = []
 
     def addMagicAoe(self, damage: int, time: float) -> None:
         self.damageList.append((DamageType.MagicAoe, damage, time))
@@ -32,20 +32,20 @@ class DamageTimeLine:
         self.damageList.append((DamageType.PhysicsAA, damage, time))
 
 
-class HealingTimeLine:
-    healingList: list[tuple(DamageType, int, float)] = []
+# class HealingTimeLine:
+#     healingList: list[tuple(DamageType, int, float)] = []
 
     # def  add
 
 
 if __name__ == "__main__":
-    # PlayerList.addPlayer(Player("mt", 120000))
-    # PlayerList.addPlayer(Player("st", 120000))
-    # PlayerList.addPlayer(Player("h1", 80000))
-    # PlayerList.addPlayer(Player("h2", 80000))
-    # PlayerList.addPlayer(Player("d1", 80000))
-    # PlayerList.addPlayer(Player("d2", 80000))
-    # PlayerList.addPlayer(Player("d3", 80000))
-    # PlayerList.addPlayer(Player("d4", 80000))
+    PlayerList.addPlayer(Player("mt", 120000))
+    PlayerList.addPlayer(Player("st", 120000))
+    PlayerList.addPlayer(Player("h1", 80000))
+    PlayerList.addPlayer(Player("h2", 80000))
+    PlayerList.addPlayer(Player("d1", 80000))
+    PlayerList.addPlayer(Player("d2", 80000))
+    PlayerList.addPlayer(Player("d3", 80000))
+    PlayerList.addPlayer(Player("d4", 80000))
 
     pass

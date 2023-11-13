@@ -1,5 +1,5 @@
-from player import Player
-from effect import Hot, Dot
+from playerPart.effect import Hot, Dot
+from playerPart.player import Player
 class PlayerList:
     ## 以仇恨值排序
     playerList: list[Player] = []
