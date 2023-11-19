@@ -1,5 +1,5 @@
 from random import random
-
+from enum import Enum
 
 class Timer:
     def __init__(self, initialTime: float = 0):
@@ -32,9 +32,9 @@ class Mitigation(Effect):
 
 
 class HealBonus(Effect):
-    def __init__(self, name: str, duration: int, percentage) -> None:
+    def __init__(self, name: str, duration: int, percentage: float) -> None:
         super().__init__(name, duration)
-        self.percentage = percentage
+        self.percentage: float = percentage
         self.type = "HealBonus"
 
 
@@ -47,7 +47,7 @@ class Dot(Effect):
 
     def update(self, timeInterval: float) -> bool:
         super().update(timeInterval)
-        return self.timer.update()
+        return self.timer.update(timeInterval)
 
 
 class Hot(Effect):
@@ -59,4 +59,22 @@ class Hot(Effect):
 
     def update(self, timeInterval: float) -> bool:
         super().update(timeInterval)
-        return self.timer.update()
+        return self.timer.update(timeInterval)
+
+class EventType(Enum):
+    Nothing = 0
+    Heal = 1
+    Mitigation = 2
+    Shield = 3
+    PhysicsDamage = 4
+    MagicDamage = 5
+
+
+class Event:
+    def __init__(
+        self, eventType: EventType, value: int = 0, effectList: list[Effect] = []
+    ) -> None:
+        self.eventType: EventType = eventType
+        self.value = value
+        self.effectList: list[Effect] = effectList
+

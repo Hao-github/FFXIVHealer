@@ -1,4 +1,4 @@
-from playerPart.effect import Effect, Dot, Hot, HealBonus, Mitigation
+from basic import Effect, Dot, Hot, HealBonus, Mitigation
 from functools import reduce
 
 
@@ -56,7 +56,7 @@ class Player:
     @property
     def totalMitigation(self) -> float:
         return reduce(
-            lambda x, y: x * (y.percentage if type(y) == Mitigation else 1),
+            lambda x, y: x * (1 - (y.percentage if type(y) == Mitigation else 0)),
             self.effectList,
             1,
         )
@@ -64,7 +64,7 @@ class Player:
     @property
     def totalHealBonus(self) -> float:
         return reduce(
-            lambda x, y: x * (y.percentage if type(y) == HealBonus else 1),
+            lambda x, y: x * (1 + (y.percentage if type(y) == HealBonus else 0)),
             self.effectList,
             1,
         )

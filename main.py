@@ -17,4 +17,4 @@ if __name__ == "__main__":
     Fight.addHealEvent(15, 30000)
 
     Fight.run()
-    pass
+    Fight.showPlayerHp()
