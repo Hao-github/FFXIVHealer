@@ -13,29 +13,39 @@ class WhiteMage(Player):
             self.PlenaryIndulgenceRemainTime -= timeInterval
 
     def PlenaryIndulgence(self) -> Event:
+        """
+        全大赦
+        """
         self.PlenaryIndulgenceRemainTime = 10
-        return Event(EventType.Nothing, "PlenaryIndulgence")
+        return Event(EventType.Other, "PlenaryIndulgence")
 
     def PIHealing(self) -> int:
+        """
+        如果有全大赦, 返回200恢复力
+        """
         if self.PlenaryIndulgenceRemainTime > 0:
             return 200
         return 0
 
     def Medica(self) -> Event:
+        """医治"""
         basicPotency = 400 * self.totalHealingSpellBonus + self.PIHealing()
         return Event(EventType.Heal, "Medica", value=int(basicPotency * self.potency))
 
     def AfflatusRapture(self) -> Event:
+        """狂喜之心"""
         basicPotency = 400 * self.totalHealingSpellBonus + self.PIHealing()
         return Event(
             EventType.Heal, "AfflatusRapture", value=int(basicPotency * self.potency)
         )
 
     def CureIII(self) -> Event:
+        """愈疗"""
         basicPotency = 600 * self.totalHealingSpellBonus + self.PIHealing()
         return Event(EventType.Heal, "CureIII", value=int(basicPotency * self.potency))
 
     def MedicaII(self) -> Event:
+        """医济"""
         basicPotency = 250 * self.totalHealingSpellBonus + self.PIHealing()
         basicHotPotency = 150 * self.totalHealingSpellBonus
         return Event(
@@ -46,6 +56,7 @@ class WhiteMage(Player):
         )
 
     def Asylum(self) -> Event:
+        """庇护所"""
         return Event(
             EventType.Heal,
             "Asylum",
@@ -57,6 +68,7 @@ class WhiteMage(Player):
         )
 
     def Assize(self) -> Event:
+        """法令"""
         return Event(
             EventType.Heal,
             "Assize",
@@ -64,9 +76,10 @@ class WhiteMage(Player):
         )
 
     def Temperance(self) -> Event:
+        """节制"""
         self.TemperanceRemainTime = 20
         return Event(
-            EventType.Mitigation,
+            EventType.Other,
             "Temperance",
             effectList=[
                 Mitigation("Temperance", 22, 0.1),

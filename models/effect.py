@@ -1,3 +1,6 @@
+"""
+模拟buff和debuff的模型的文件
+"""
 from random import random
 
 class Timer:

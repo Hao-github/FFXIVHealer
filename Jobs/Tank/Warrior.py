@@ -1,4 +1,4 @@
-from Jobs.Tank.tank import Tank
+from Jobs.Tank.Tank import Tank
 from models.effect import Hot, Shield
 from models.event import Event, EventType
 

@@ -5,11 +5,10 @@ from .effect import Effect
 
 
 class EventType(Enum):
-    Nothing = 0
+    Other = 0
     Heal = 1
-    Mitigation = 2
-    PhysicsDamage = 3
-    MagicDamage = 4
+    PhysicsDamage = 2
+    MagicDamage = 3
 
 
 class Event:

@@ -1,4 +1,4 @@
-from Jobs.Tank.tank import Tank
+from Jobs.Tank.Tank import Tank
 from models.effect import Mitigation, Shield
 from models.event import Event, EventType
 
@@ -17,7 +17,7 @@ class Paladin(Tank):
 
     def PassageOfArms(self) -> Event:
         return Event(
-            EventType.Mitigation,
+            EventType.Other,
             "PassageOfArms",
             effectList=Mitigation("PassageOfArms", 5, 0.15),
         )

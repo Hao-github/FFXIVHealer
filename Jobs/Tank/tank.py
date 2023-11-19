@@ -10,5 +10,5 @@ class Tank(Player):
     
     def Reprisal(self) -> Event:
         return Event(
-            EventType.Mitigation, "Reprisal", effectList=Mitigation("Reprisal", 10, 0.1)
+            EventType.Other, "Reprisal", effectList=Mitigation("Reprisal", 10, 0.1)
         )

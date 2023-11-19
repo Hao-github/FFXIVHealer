@@ -28,21 +28,6 @@ class Fight:
         cls.eventList.append((time, Event(EventType.MagicDamage, name, value=value)))
 
     @classmethod
-    def addMitigationEvent(
-        cls, time: float, name: str, percentage: float, duration: int
-    ) -> None:
-        cls.eventList.append(
-            (
-                time,
-                Event(
-                    EventType.Mitigation,
-                    name,
-                    effectList=[Mitigation(name, duration, percentage)],
-                ),
-            )
-        )
-
-    @classmethod
     def addEvent(cls, time: float, event: Event) -> None:
         cls.eventList.append((time, event))
 

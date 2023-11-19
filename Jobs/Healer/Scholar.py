@@ -17,7 +17,7 @@ class Scholar(Player):
 
     def Recitation(self) -> Event:
         self.RecitationRemainTime = 15
-        return Event(EventType.Nothing, "Recitation")
+        return Event(EventType.Other, "Recitation")
 
     def checkRecitation(self, potency: int) -> float:
         if self.RecitationRemainTime > 0:
@@ -44,7 +44,7 @@ class Scholar(Player):
 
     def FeyIllumination(self) -> Event:
         return Event(
-            EventType.Mitigation,
+            EventType.Other,
             "FeyIllumination",
             effectList=[
                 Mitigation("FeyIlluminationMtg", 20, 0.05),
@@ -69,7 +69,7 @@ class Scholar(Player):
 
     def Dissipation(self) -> Event:
         return Event(
-            EventType.Nothing,
+            EventType.Other,
             "Dissipation",
             effectList=HealingSpellBonus("Dissipation", 30, 0.2),
             target=self,
@@ -90,7 +90,7 @@ class Scholar(Player):
 
     def Expedient(self) -> Event:
         return Event(
-            EventType.Mitigation,
+            EventType.Other,
             "Expedient",
             effectList=[Mitigation("Expedient", 20, 0.1)],
         )
