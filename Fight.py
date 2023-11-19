@@ -1,5 +1,5 @@
 from player import Player
-from basic import Hot, Dot, Mitigation, Event, EventType
+from basic import Dot, Event, EventType, Hot, Mitigation
 
 
 class Fight:
@@ -16,18 +16,10 @@ class Fight:
         cls.playerList.append(player)
 
     @classmethod
-    def addHealEvent(cls, time: float, value: int, hot: Hot | None = None) -> None:
-        cls.eventList.append((time, Event(EventType.Heal, value=value, effectList=hot)))
-
-    @classmethod
     def addDamageEvent(cls, time: float, value: int, dot: Dot | None = None) -> None:
         cls.eventList.append(
             (time, Event(EventType.MagicDamage, value=value, effectList=dot))
         )
-
-    @classmethod
-    def addShieldEvent(cls, time: float, value: int) -> None:
-        cls.eventList.append((time, Event(EventType.Shield, value=value)))
 
     @classmethod
     def addMitigationEvent(cls, time: float, percentage: float, duration: int) -> None:
@@ -56,9 +48,7 @@ class Fight:
                         player.getHeal(event.value)
                     case EventType.MagicDamage:
                         player.getDamage(event.value)
-                    case EventType.Shield:
-                        player.getShield(event.value)
-                        # comment:
+
                 if event.effectList:
                     for effect in event.effectList:
                         player.getEffect(effect)
@@ -68,13 +58,14 @@ class Fight:
     def run(cls) -> True:
         if not cls.playerList or not cls.eventList:
             return False
-        cls.eventList.sort(key = lambda x: x[0])
+        cls.eventList.sort(key=lambda x: x[0])
         eventIndex: int = 0
         nextEvent: tuple[float, Event] = cls.eventList[eventIndex]
         timeSnapshotList = [
             i * cls.timeInterval
             for i in range(
-                0, int((cls.eventList[-1][0] + cls.timeInterval) // cls.timeInterval) + 10
+                0,
+                int((cls.eventList[-1][0] + cls.timeInterval) // cls.timeInterval) + 10,
             )
         ]
         for timeSnapshot in timeSnapshotList:
@@ -86,7 +77,6 @@ class Fight:
                 if len(cls.eventList) == eventIndex:
                     break
                 nextEvent = cls.eventList[eventIndex]
-                print(nextEvent)
 
     @classmethod
     def showPlayerHp(cls):

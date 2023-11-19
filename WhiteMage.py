@@ -4,28 +4,39 @@ from basic import Event, EventType, HealBonus, Hot, Mitigation
 class WhiteMage:
     def __init__(self) -> None:
         self.potency = 2500
-        self.underPlenaryIndulgence: bool = False
+        self.PlenaryIndulgenceRemainTime: float = 0
+        self.TemperanceRemainTime: float = 0
+        self.HealingSpellBonus: float = 1
 
-    def OpenPlenaryIndulgence(self) -> None:
-        self.underPlenaryIndulgence = True
+    def update(self, timeInterval: float) -> None:
+        self.HealingSpellBonus = 1.2 if self.TemperanceRemainTime > 0 else 1
+        for buff in [self.PlenaryIndulgenceRemainTime, self.TemperanceRemainTime]:
+            if buff > 0:
+                buff -= timeInterval
 
-    def ClosePlenaryIndulgence(self) -> None:
-        self.underPlenaryIndulgence = False
+    def PlenaryIndulgence(self) -> None:
+        self.PlenaryIndulgenceRemainTime = 10
+
+    def PIHealing(self) -> int:
+        if self.PlenaryIndulgenceRemainTime > 0:
+            return 200
+        return 0
 
     def Medica(self) -> Event:
-        basicPotency = 600 if self.underPlenaryIndulgence else 400
+        basicPotency = 400 * self.HealingSpellBonus + self.PIHealing
         return Event(EventType.Heal, value=basicPotency * self.potency)
 
     def CureIII(self) -> Event:
-        basicPotency = 800 if self.underPlenaryIndulgence else 600
+        basicPotency = 600 * self.HealingSpellBonus + self.PIHealing
         return Event(EventType.Heal, value=basicPotency * self.potency)
 
     def MedicaII(self) -> Event:
-        basicPotency = 450 if self.underPlenaryIndulgence else 250
+        basicPotency = 250 * self.HealingSpellBonus + self.PIHealing
+        basicHotPotency = 150 * self.HealingSpellBonus
         return Event(
             EventType.Heal,
             value=basicPotency * self.potency,
-            effectList=[Hot("MedicaIII", 15, 150 * self.potency)],
+            effectList=[Hot("MedicaII", 15, basicHotPotency * self.potency)],
         )
 
     def Asylum(self) -> Event:
@@ -45,10 +56,10 @@ class WhiteMage:
         )
 
     def Temperance(self) -> Event:
+        self.TemperanceRemainTime = 20
         return Event(
             EventType.Mitigation,
             effectList=[
-                HealBonus("TemperanceHB", 20, 0.2),
                 Mitigation("Temperance", 22, 0.1),
             ],
         )

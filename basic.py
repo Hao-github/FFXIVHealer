@@ -17,7 +17,6 @@ class Effect:
     def __init__(self, name: str, duration: int) -> None:
         self.name: str = name
         self.duration: int = duration
-        self.type: str = ""
         self.remainTime: float = duration
 
     def update(self, timeInterval: float) -> None:
@@ -28,14 +27,16 @@ class Mitigation(Effect):
     def __init__(self, name: str, duration: int, percentage: float) -> None:
         super().__init__(name, duration)
         self.percentage: float = percentage
-        self.type = "Mitigation"
 
+class Shield(Effect):
+    def __init__(self, name: str, duration: int, value: int) -> None:
+        super().__init__(name, duration)
+        self.shieldHp: int = value
 
 class HealBonus(Effect):
     def __init__(self, name: str, duration: int, percentage: float) -> None:
         super().__init__(name, duration)
         self.percentage: float = percentage
-        self.type = "HealBonus"
 
 
 class Dot(Effect):
@@ -43,7 +44,6 @@ class Dot(Effect):
         super().__init__(name, duration)
         self.damage: float = damage
         self.timer: Timer = Timer(random() * 3)
-        self.type = "Dot"
 
     def update(self, timeInterval: float) -> bool:
         super().update(timeInterval)
@@ -65,9 +65,8 @@ class EventType(Enum):
     Nothing = 0
     Heal = 1
     Mitigation = 2
-    Shield = 3
-    PhysicsDamage = 4
-    MagicDamage = 5
+    PhysicsDamage = 3
+    MagicDamage = 4
 
 
 class Event:
