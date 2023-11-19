@@ -1,5 +1,4 @@
 from random import random
-from enum import Enum
 
 class Timer:
     def __init__(self, initialTime: float = 0):
@@ -28,21 +27,28 @@ class Mitigation(Effect):
         super().__init__(name, duration)
         self.percentage: float = percentage
 
+
 class Shield(Effect):
     def __init__(self, name: str, duration: int, value: int) -> None:
         super().__init__(name, duration)
         self.shieldHp: int = value
+
 
 class HealBonus(Effect):
     def __init__(self, name: str, duration: int, percentage: float) -> None:
         super().__init__(name, duration)
         self.percentage: float = percentage
 
+class HealingSpellBonus(Effect):
+    def __init__(self, name: str, duration: int, percentage: float) -> None:
+        super().__init__(name, duration)
+        self.percentage: float = percentage
+
 
 class Dot(Effect):
-    def __init__(self, name: str, duration: int, damage: float) -> None:
+    def __init__(self, name: str, duration: int, damage: int) -> None:
         super().__init__(name, duration)
-        self.damage: float = damage
+        self.damage: int = damage
         self.timer: Timer = Timer(random() * 3)
 
     def update(self, timeInterval: float) -> bool:
@@ -51,29 +57,11 @@ class Dot(Effect):
 
 
 class Hot(Effect):
-    def __init__(self, name: str, duration: int, healing: float) -> None:
+    def __init__(self, name: str, duration: int, healing: int) -> None:
         super().__init__(name, duration)
-        self.healing: float = healing
+        self.healing: int = healing
         self.timer: Timer = Timer(random() * 3)
-        self.type = "Hot"
 
     def update(self, timeInterval: float) -> bool:
         super().update(timeInterval)
         return self.timer.update(timeInterval)
-
-class EventType(Enum):
-    Nothing = 0
-    Heal = 1
-    Mitigation = 2
-    PhysicsDamage = 3
-    MagicDamage = 4
-
-
-class Event:
-    def __init__(
-        self, eventType: EventType, value: int = 0, effectList: list[Effect] = []
-    ) -> None:
-        self.eventType: EventType = eventType
-        self.value = value
-        self.effectList: list[Effect] = effectList
-

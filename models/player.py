@@ -1,39 +1,37 @@
-from basic import Dot, Effect, HealBonus, Hot, Mitigation, Shield
+from .effect import Dot, Effect, HealBonus, HealingSpellBonus, Hot, Mitigation, Shield
 from functools import reduce
 
 
 class Player:
-    def __init__(self, name: str, hp: int) -> None:
+    def __init__(self, name: str, hp: int, potency: float) -> None:
         self.name: str = name
         self.maxHp: int = hp
         self.hp: int = hp
         self.effectList: list[Effect] = []
         self.isSurvival: bool = True
+        self.potency: float = potency
 
     def getDamage(self, damage: int, fromEffect: bool = False) -> None:
-        shieldList: list[Shield] = list(filter(lambda x: type(x) == Shield, self.effectList))
-        realDamage: float = damage if fromEffect else damage * self.totalMitigation
-        if not shieldList:
-            self.hp -= realDamage
-            return
-        for shield in shieldList:
-            if shield.shieldHp > realDamage:
-                shield.shieldHp -= realDamage
-                return
-            realDamage -= shield.shieldHp
-            shield.shieldHp = 0
-            shield.remainTime = 0
+        realDamage: int = int(damage if fromEffect else damage * self.totalMitigation)
+        for effect in self.effectList:
+            if type(effect) == Shield:
+                if effect.shieldHp > realDamage:
+                    effect.shieldHp -= realDamage
+                    return
+                realDamage -= effect.shieldHp
+                effect.shieldHp = 0
+                effect.remainTime = 0
         self.hp -= realDamage
 
     def getHeal(self, heal: int, fromEffect: bool = False) -> None:
-        realHeal = heal if fromEffect else heal * self.totalHealBonus
+        realHeal: int = int(heal if fromEffect else heal * self.totalHealBonus)
         self.hp = min(self.maxHp, self.hp + realHeal)
 
     def getEffect(self, effect: Effect) -> None:
         if type(effect) == Dot:
-            effect.damage = effect.damage * self.totalMitigation
+            effect.damage = int(effect.damage * self.totalMitigation)
         elif type(effect) == Hot:
-            effect.healing = effect.healing * self.totalHealBonus
+            effect.healing = int(effect.healing * self.totalHealBonus)
         self.effectList.append(effect)
 
     def update(self, timeInterval: float) -> None:
@@ -66,6 +64,15 @@ class Player:
     def totalHealBonus(self) -> float:
         return reduce(
             lambda x, y: x * (1 + (y.percentage if type(y) == HealBonus else 0)),
+            self.effectList,
+            1,
+        )
+
+    @property
+    def totalHealingSpellBonus(self) -> float:
+        return reduce(
+            lambda x, y: x
+            * (1 + (y.percentage if type(y) == HealingSpellBonus else 0)),
             self.effectList,
             1,
         )
