@@ -7,5 +7,5 @@ class MagicDPS(Player):
     def __init__(self, name: str, hp: int, potency: float) -> None:
         super().__init__(name, hp, potency)
 
-    def Feint(self) -> Event:
-        return Event(EventType.Other, "Feint", effectList=Mitigation("Addle", 10, 0.1))
+    def Addle(self) -> Event:
+        return Event(EventType.Other, "Addle", effect=Mitigation("Addle", 10, 0.1))

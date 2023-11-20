@@ -1,7 +1,15 @@
 """
 模拟buff和debuff的模型的文件
 """
+from enum import Enum
 from random import random
+
+
+class DataType(Enum):
+    Physics = 0
+    Magic = 1
+    Real = 2
+
 
 class Timer:
     def __init__(self, initialTime: float = 0):
@@ -31,6 +39,12 @@ class Mitigation(Effect):
         self.percentage: float = percentage
 
 
+class MagicMitigation(Effect):
+    def __init__(self, name: str, duration: int, percentage: float) -> None:
+        super().__init__(name, duration)
+        self.percentage: float = percentage
+
+
 class Shield(Effect):
     def __init__(self, name: str, duration: int, value: int) -> None:
         super().__init__(name, duration)
@@ -41,6 +55,7 @@ class HealBonus(Effect):
     def __init__(self, name: str, duration: int, percentage: float) -> None:
         super().__init__(name, duration)
         self.percentage: float = percentage
+
 
 class HealingSpellBonus(Effect):
     def __init__(self, name: str, duration: int, percentage: float) -> None:

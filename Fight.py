@@ -1,24 +1,23 @@
 import pandas as pd
+from Jobs.Healer import Scholar, WhiteMage
 from models.player import Player
-from models.effect import Dot, Hot, Mitigation
+from models.effect import Dot, Hot
 from models.event import Event, EventType
 
-# from basic import Dot, Hot, Mitigation, Event, EventType
 from copy import deepcopy
 
 
 class Fight:
-    ## 以仇恨值排序
     playerList: list[Player] = []
 
     # 事件, 数值, 时间
     eventList: list[tuple[float, Event]] = []
+    eventIndex = 0
     timeInterval: float = 0.01
 
     @classmethod
-    def addPlayer(cls, playerName: str, playerHp: int, potency: float = 25) -> None:
-        player = Player(playerName, playerHp, potency)
-        player.getEffect(Hot("naturalHeal", 10000, playerHp // 100))
+    def addPlayer(cls, player: Player) -> None:
+        player.getEffect(Hot("naturalHeal", 10000, player.maxHp // 100))
         cls.playerList.append(player)
 
     @classmethod
@@ -32,7 +31,9 @@ class Fight:
         cls.eventList.append((time, event))
 
     @classmethod
-    def updatePlayerstatus(cls, timeInterval: float, event: Event | None = None):
+    def dealWithEvent(cls, event: Event):
+        if type(event.user) == Scholar or type(event.user) == WhiteMage:
+            event = event.user.updateEvent(event)
         for player in cls.playerList:
             if event and (not event.target or event.target == player):
                 match event.eventType:
@@ -40,22 +41,15 @@ class Fight:
                         player.getHeal(event.value)
                     case EventType.MagicDamage:
                         player.getDamage(event.value)
-
-                if event.effectList:
-                    if isinstance(event.effectList, list):
-                        for effect in event.effectList:
-                            player.getEffect(deepcopy(effect))
-                    else:
-                        player.getEffect(deepcopy(event.effectList))
-            player.update(timeInterval)
+                for effect in event.effectList:
+                    player.getEffect(deepcopy(effect))
 
     @classmethod
     def run(cls):
         if not cls.playerList or not cls.eventList:
-            return False
+            return
         cls.eventList.sort(key=lambda x: x[0])
-        eventIndex: int = 0
-        nextEvent: tuple[float, Event] = cls.eventList[eventIndex]
+        nextEvent: tuple[float, Event] = cls.eventList[cls.eventIndex]
         timeSnapshotList = [
             i * cls.timeInterval
             for i in range(
@@ -64,14 +58,15 @@ class Fight:
             )
         ]
         for timeSnapshot in timeSnapshotList:
-            if timeSnapshot != nextEvent[0]:
-                cls.updatePlayerstatus(cls.timeInterval)
-            else:
-                cls.updatePlayerstatus(cls.timeInterval, nextEvent[1])
-                eventIndex += 1
-                if len(cls.eventList) == eventIndex:
+            while timeSnapshot == nextEvent[0]:
+                cls.dealWithEvent(nextEvent[1])
+                cls.eventIndex += 1
+                if len(cls.eventList) == cls.eventIndex:  # 所有事件都处理完了
                     break
-                nextEvent = cls.eventList[eventIndex]
+                nextEvent = cls.eventList[cls.eventIndex]
+
+            for player in cls.playerList:
+                player.update(cls.timeInterval)
 
     @classmethod
     def showPlayerHp(cls):
@@ -80,7 +75,7 @@ class Fight:
 
     @classmethod
     def importScholarSkills(cls, df: pd.DataFrame):
-        healingSkillList = [
+        healingSkillList = [  # noqa: F841
             "仙光的低语",
             "转化",
             "野战治疗阵",
@@ -97,5 +92,4 @@ class Fight:
             .assign(技能=lambda x: x["技能"].apply(lambda x: x.split(" ")[0]))
             .query("技能 in @healingSkillList")[["时间", "技能"]]
             .reset_index(drop=True)
-            .head(40)
         )
