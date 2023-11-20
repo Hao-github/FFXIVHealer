@@ -22,6 +22,7 @@ class Player:
         self.potency: float = potency
 
     def __getRealDamage(self, damage: int, damageType: DataType) -> int:
+        """根据伤害类型计算承受伤害"""
         if damageType == DataType.Real:
             return damage
         if damageType == DataType.Magic:
@@ -29,6 +30,7 @@ class Player:
         return int(damage * self.totalPhysicsMitigation)
 
     def __getRealHeal(self, heal: int, healingType: DataType) -> int:
+        """根据治疗类型判断是否吃受疗加成"""
         if healingType == DataType.Real:
             return heal
         return int(heal * self.totalHealBonus)
@@ -38,6 +40,7 @@ class Player:
         damage: int,
         dataType: DataType = DataType.Magic,
     ) -> None:
+        """计算承受伤害,并从盾值中抵消"""
         damage = self.__getRealDamage(damage, dataType)
         for effect in self.effectList:
             if type(effect) == Shield:
@@ -50,9 +53,11 @@ class Player:
         self.hp -= damage
 
     def getHeal(self, heal: int, dataType: DataType = DataType.Magic) -> None:
+        """计算治疗数值, 并防止角色血量超上限"""
         self.hp = min(self.maxHp, self.hp + self.__getRealHeal(heal, dataType))
 
     def getEffect(self, effect: Effect, dataType: DataType = DataType.Magic) -> None:
+        """获取buff或者debuff,如果是hot或者dot就要计算快照"""
         if type(effect) == Dot:
             effect.damage = self.__getRealDamage(effect.damage, dataType)
         elif type(effect) == Hot:
@@ -79,6 +84,7 @@ class Player:
 
     @property
     def totalMagicMitigation(self) -> float:
+        """计算魔法减伤"""
         return reduce(
             lambda x, y: x
             * (
@@ -95,6 +101,7 @@ class Player:
 
     @property
     def totalPhysicsMitigation(self) -> float:
+        """计算物理减伤"""
         return reduce(
             lambda x, y: x * (1 - (y.percentage if type(y) == Mitigation else 0)),
             self.effectList,
@@ -103,6 +110,7 @@ class Player:
 
     @property
     def totalHealBonus(self) -> float:
+        """计算受疗增益"""
         return reduce(
             lambda x, y: x * (1 + (y.percentage if type(y) == HealBonus else 0)),
             self.effectList,
@@ -111,6 +119,7 @@ class Player:
 
     @property
     def totalHealingSpellBonus(self) -> float:
+        """计算治疗魔法增益"""
         ret = reduce(
             lambda x, y: x
             * (1 + (y.percentage if type(y) == HealingSpellBonus else 0)),

@@ -1,11 +1,41 @@
-from models.effect import Effect, HealBonus, HealingSpellBonus, Hot, Mitigation, Shield
+from models.effect import (
+    Effect,
+    HealBonus,
+    HealingSpellBonus,
+    Hot,
+    MagicMitigation,
+    Mitigation,
+    Shield,
+)
 from models.event import Event, EventType
 from models.player import Player
 
 
-class Scholar(Player):
+class Healer(Player):
+    def __init__(
+        self, name: str, hp: int, potency: float, spellList: list[str]
+    ) -> None:
+        super().__init__(name, hp, potency)
+        self.HealingSpellList: list[str] = spellList
+
+    def updateEvent(self, event: Event) -> Event:
+        if event.name in self.HealingSpellList:
+            self._bonusHealingSpell(event, self.totalHealingSpellBonus)
+        return event
+
+    def _bonusHealingSpell(self, event: Event, percentage: float) -> Event:
+        event.value = int(event.value * percentage)
+        for effect in event.effectList:
+            if type(effect) == Shield:
+                effect.shieldHp = int(effect.shieldHp * percentage)
+            elif type(effect) == Hot:
+                effect.healing = int(effect.healing * percentage)
+        return event
+
+
+class Scholar(Healer):
     def __init__(self, hp: int, potency: int, criticalNum: float) -> None:
-        super().__init__("Scholar", hp, potency)
+        super().__init__("Scholar", hp, potency, ["Succor"])
         self.petCoefficient: float = 0.95
         self.criticalNum: float = criticalNum
 
@@ -13,14 +43,12 @@ class Scholar(Player):
         return Event(EventType.Other, "Recitation", effect=Effect("Recitation", 15))
 
     def updateEvent(self, event: Event) -> Event:
-        if event.name in ["Succor"]:
-            self._bonusHealingSpell(event, self.totalHealingSpellBonus)
+        event = super().updateEvent(event)
         if event.name in ["Succor", "Indomitability"]:
             for effect in self.effectList:
                 if effect.name == "Recitation":
                     effect.remainTime = 0
-                    self._bonusHealingSpell(event, self.criticalNum)
-                    break
+                    return self._bonusHealingSpell(event, self.criticalNum)
         return event
 
     def WhisperingDawn(self) -> Event:
@@ -44,7 +72,7 @@ class Scholar(Player):
             EventType.Other,
             "FeyIllumination",
             effect=[
-                Mitigation("FeyIlluminationMtg", 20, 0.05),
+                MagicMitigation("FeyIlluminationMtg", 20, 0.05),
                 HealingSpellBonus("FeyIlluminationHSB", 20, 0.1),
             ],
         )
@@ -91,35 +119,29 @@ class Scholar(Player):
             effect=[Mitigation("Expedient", 20, 0.1)],
         )
 
-    def _bonusHealingSpell(self, event: Event, percentage: float) -> Event:
-        if event.name in ["Succor"]:
-            event.value = int(event.value * percentage)
-            for effect in event.effectList:
-                if type(effect) == Shield:
-                    effect.shieldHp = int(effect.shieldHp * percentage)
-        return event
 
-
-class WhiteMage(Player):
+class WhiteMage(Healer):
     def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("WhiteMage", hp, potency)
+        super().__init__(
+            "WhiteMage",
+            hp,
+            potency,
+            ["Medica", "MedicaII", "CureIII", "AfflatusRapture"],
+        )
 
     def updateEvent(self, event: Event) -> Event:
-        if event.name in ["Medica", "MedicaII", "CureIII", "AfflatusRapture"]:
-            event.value = int(event.value * self.totalHealingSpellBonus)
-            for effect in event.effectList:
-                if type(effect) == Hot:
-                    effect.healing *= int(self.totalHealingSpellBonus)
-            for effect in self.effectList:
-                if effect.name == "PlenaryIndulgence":
-                    event.value += 200
-                    break
+        event = super().updateEvent(event)
+        for effect in self.effectList:
+            if (
+                effect.name == "PlenaryIndulgence"
+                and event.name in self.HealingSpellList
+            ):
+                event.value += 200
+                return event
         return event
 
     def PlenaryIndulgence(self) -> Event:
-        """
-        全大赦
-        """
+        """全大赦"""
         return Event(
             EventType.Other,
             "PlenaryIndulgence",
@@ -129,30 +151,23 @@ class WhiteMage(Player):
 
     def Medica(self) -> Event:
         """医治"""
-        basicPotency = 400 * self.totalHealingSpellBonus
-        return Event(EventType.Heal, "Medica", value=int(basicPotency * self.potency))
+        return Event(EventType.Heal, "Medica", value=int(400 * self.potency))
 
     def AfflatusRapture(self) -> Event:
         """狂喜之心"""
-        basicPotency = 400 * self.totalHealingSpellBonus
-        return Event(
-            EventType.Heal, "AfflatusRapture", value=int(basicPotency * self.potency)
-        )
+        return Event(EventType.Heal, "AfflatusRapture", value=int(400 * self.potency))
 
     def CureIII(self) -> Event:
         """愈疗"""
-        basicPotency = 600 * self.totalHealingSpellBonus
-        return Event(EventType.Heal, "CureIII", value=int(basicPotency * self.potency))
+        return Event(EventType.Heal, "CureIII", value=int(600 * self.potency))
 
     def MedicaII(self) -> Event:
         """医济"""
-        basicPotency = 250 * self.totalHealingSpellBonus
-        basicHotPotency = 150 * self.totalHealingSpellBonus
         return Event(
             EventType.Heal,
             "MedicaII",
-            value=int(basicPotency * self.potency),
-            effect=Hot("MedicaII", 15, int(basicHotPotency * self.potency)),
+            value=int(250 * self.potency),
+            effect=Hot("MedicaII", 15, int(150 * self.potency)),
         )
 
     def Asylum(self) -> Event:
@@ -177,7 +192,6 @@ class WhiteMage(Player):
 
     def Temperance(self) -> Event:
         """节制"""
-        self.TemperanceRemainTime = 20
         return Event(
             EventType.Other,
             "Temperance",
@@ -188,80 +202,51 @@ class WhiteMage(Player):
         )
 
 
-# from basic import Event, EventType, Hot, Mitigation, Shield
+class Astrologian(Healer):
+    def __init__(self, name: str, hp: int, potency: float) -> None:
+        super().__init__(name, hp, potency, ["Helios", "AspectedHelios"])
 
+    def updateEvent(self, event: Event) -> Event:
+        event = super().updateEvent(event)
+        for effect in self.effectList:
+            if effect.name == "NeutralSect" and event.name in ["AspectedHelios"]:
+                event.effectList.append(
+                    Shield("NeutralSectShield", 30, int(event.value * 1.25))
+                )
+                break
+        return event
 
-# class Astrologian:
-#     def __init__(self, potency: int) -> None:
-#         self.potency: int = potency
-#         self.EarthlyStarRemainTime: float = -1
-#         self.NeutralSectRemainTime: float = 0
-#         self.HoroscopeRemainTime: float = -1
-#         self.MacrocosmosRemainTime: float = -1
-#         self.BigHoroscopeRemainTime: float = -1
-#         self.HealingSpellBonus: float = 1
+    def Helios(self) -> Event:
+        return Event(EventType.Heal, "Helios", value=int(400 * self.potency))
 
-#     def update(self) -> None:
-#         pass
+    def AspectedHelios(self) -> Event:
+        return Event(
+            EventType.Heal,
+            "AspectedHelios",
+            value=int(250 * self.potency),
+            effect=Hot("AspectedHeliosHot", 15, int(150 * self.potency)),
+        )
 
-#     def Helios(self) -> Event:
-#         basicPotency: float = 400 * self.HealingSpellBonus
-#         if self.HoroscopeRemainTime > 0:
-#             self.HoroscopeRemainTime = -1
-#             self.BigHoroscopeRemainTime = 30
-#         return Event(EventType.Heal, "Helios",value=basicPotency * self.potency)
+    def CollectiveUnconscious(self) -> Event:
+        return Event(
+            EventType.Heal,
+            "CollectiveUnconscious",
+            effect=[
+                Mitigation("CUMtg", 5, 0.1),
+                Hot("CUHot", 15, int(100 * self.potency)),
+            ],
+        )
 
-#     def AspectedHelios(self) -> Event:
-#         basicPotency: int = 250 * self.HealingSpellBonus
-#         basicHotPotency: int = 150 * self.HealingSpellBonus
-#         if self.HoroscopeRemainTime > 0:
-#             self.HoroscopeRemainTime = -1
-#             self.BigHoroscopeRemainTime = 30
-#         ret: Event = Event(
-#             EventType.Heal,
-#             value=basicPotency * self.potency,
-#             effectList=[Hot("AspectedHeliosHot", 15, basicHotPotency * self.potency)],
-#         )
-#         if self.NeutralSectRemainTime > 0:
-#             ret.effectList.append(
-#                 Shield("AspectedHeliosShield", 30, basicPotency * 1.25 * self.potency)
-#             )
-#         return ret
+    def CelestialOpposition(self) -> Event:
+        return Event(
+            EventType.Heal,
+            "CelestialOpposition",
+            value=int(200 * self.potency),
+            effect=Hot("COHot", 15, int(100 * self.potency)),
+        )
 
-#     def CollectiveUnconscious(self) -> Event:
-#         return Event(
-#             EventType.Heal,
-#             effectList=[
-#                 Mitigation("CUMtg", 5, 0.1),
-#                 Hot("CUHot", 15, 100),
-#             ],
-#         )
+    def EarthlyStar(self) -> Event:
+        return Event(EventType.Heal, "EarthlyStar", value=int(720 * self.potency))
 
-#     def CelestialOpposition(self) -> Event:
-#         return Event(EventType.Heal, value=200, effectList=[Hot("COHot", 15, 100)])
-
-#     def SetEarthlyStar(self) -> None:
-#         self.EarthlyStarRemainTime = 20
-
-#     def EarthlyStar(self) -> Event | None:
-#         if self.EarthlyStarRemainTime > 10:
-#             return Event(EventType.Heal, value=540 * self.potency)
-#         elif self.EarthlyStarRemainTime >= 0:
-#             return Event(EventType.Heal, value=720 * self.potency)
-#         else:
-#             return None
-
-#     def SetHoroscope(self) -> None:
-#         self.HoroscopeRemainTime = 10
-
-#     def Horoscope(self) -> Event | None:
-#         if self.HoroscopeRemainTime > 0:
-#             self.HoroscopeRemainTime = -1
-#             return Event(EventType.Heal, 200 * self.potency)
-#         if self.BigHoroscopeRemainTime > 0:
-#             self.HoroscopeRemainTime = -1
-#             return Event(EventType.Heal, 400 * self.potency)
-#         return None
-
-#     def NeutralSect(self) -> Event | None:
-#         self.NeutralSectRemainTime = 20
+    def NeutralSect(self) -> Event | None:
+        return Event(EventType.Other, "NeutralSect", effect=Effect("NeutralSect", 20))

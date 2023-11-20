@@ -1,4 +1,4 @@
-from models.effect import Mitigation, Shield, Hot
+from models.effect import MagicMitigation, Mitigation, Shield, Hot
 from models.event import Event, EventType
 from models.player import Player
 
@@ -36,7 +36,7 @@ class Paladin(Tank):
 
 
 class Warrior(Tank):
-    def __init__(self,hp: int, potency: float) -> None:
+    def __init__(self, hp: int, potency: float) -> None:
         super().__init__("Warrior", hp, potency)
 
     def ShakeItOff(self) -> Event:
@@ -48,4 +48,28 @@ class Warrior(Tank):
                 Hot("ShakeItOffHot", 15, int(100 * self.potency)),
                 Shield("ShakeItOffShield", 30, int(self.maxHp * 0.15)),
             ],
+        )
+
+
+class GunBreaker(Tank):
+    def __init__(self, hp: int, potency: float) -> None:
+        super().__init__("GunBreaker", hp, potency)
+
+    def HeartOfLight(self) -> Event:
+        return Event(
+            EventType.Other,
+            "HeartOfLight",
+            effect=MagicMitigation("HeartOfLight", 15, 0.1),
+        )
+
+
+class DarkKnight(Tank):
+    def __init__(self, hp: int, potency: float) -> None:
+        super().__init__("GunBreaker", hp, potency)
+
+    def DarkMissionary(self) -> Event:
+        return Event(
+            EventType.Other,
+            "DarkMissionary",
+            effect=MagicMitigation("DarkMissionary", 15, 0.1),
         )
