@@ -1,3 +1,4 @@
+from copy import deepcopy
 from models.effect import (
     Effect,
     HealBonus,
@@ -34,22 +35,98 @@ class Healer(Player):
 
 
 class Scholar(Healer):
+    # TODO: 绿帽Excogitation, 回生法Protraction, 连线Aetherpact尚未写入
     def __init__(self, hp: int, potency: int, criticalNum: float) -> None:
-        super().__init__("Scholar", hp, potency, ["Succor"])
+        super().__init__("Scholar", hp, potency, ["Succor", "Physicks", "Adloquium"])
         self.petCoefficient: float = 0.95
         self.criticalNum: float = criticalNum
+
+    def updateEvent(self, event: Event) -> Event:
+        event = super().updateEvent(event)
+        # 判断目标身上是否有盾, 并进行展开
+        if event.name == "Deployment":
+            if deploySheild := self.__checkAdloquium(event.target):
+                event.effectList.append(deploySheild)
+                return event
+        # 判断是否有秘策增幅
+        if (
+            event.name in ["Succor", "Indomitability", "Adloquium"]
+            and self.__checkRecitation()
+        ):
+            if event.name == "Adloquium":
+                event.effectList.append(Shield("Catalyze", 30, int(event.value * 1.8)))
+            return self._bonusHealingSpell(event, self.criticalNum)
+        return event
+
+    def __checkRecitation(self) -> bool:
+        for effect in self.effectList:
+            if effect.name == "Recitation":
+                effect.remainTime = 0
+                return True
+        return False
+
+    def __checkAdloquium(self, target: Player | None) -> Shield | None:
+        if not target:
+            return None
+        for effect in target.effectList:
+            if effect.name == "Adloquium" and type(effect) == Shield:
+                ret = deepcopy(effect)
+                effect.remainTime = 0
+                return ret
+        return None
+
+    # buff类技能
 
     def Recitation(self) -> Event:
         return Event(EventType.Other, "Recitation", effect=Effect("Recitation", 15))
 
-    def updateEvent(self, event: Event) -> Event:
-        event = super().updateEvent(event)
-        if event.name in ["Succor", "Indomitability"]:
-            for effect in self.effectList:
-                if effect.name == "Recitation":
-                    effect.remainTime = 0
-                    return self._bonusHealingSpell(event, self.criticalNum)
-        return event
+    def Dissipation(self) -> Event:
+        return Event(
+            EventType.Other,
+            "Dissipation",
+            effect=HealingSpellBonus("Dissipation", 30, 0.2),
+            target=self,
+        )
+
+    def Deployment(self, target: Player | None = None) -> Event:
+        if not target:
+            target = self
+        return Event(EventType.Other, "Deployment From " + target.name, target=target)
+
+    # 单奶
+
+    def Physick(self, target: Player | None = None) -> Event:
+        if not target:
+            target = self
+        return Event(
+            EventType.Heal,
+            "Physick",
+            value=int(450 * self.potency),
+            target=target,
+        )
+
+    def Adloquium(self, target: Player | None = None) -> Event:
+        if not target:
+            target = self
+        return Event(
+            EventType.Heal,
+            "Physick",
+            value=int(300 * self.potency),
+            effect=Shield("Adloquium", 30, int(540 * self.potency)),
+            target=target,
+        )
+
+    def Lustrate(self, target: Player | None = None) -> Event:
+        if not target:
+            target = self
+        return Event(
+            EventType.Heal,
+            "Physick",
+            value=int(600 * self.potency),
+            target=target,
+        )
+
+    # 群奶
 
     def WhisperingDawn(self) -> Event:
         return Event(
@@ -91,14 +168,6 @@ class Scholar(Healer):
     def Indomitability(self) -> Event:
         return Event(EventType.Heal, "Indomitability", int(400 * self.potency))
 
-    def Dissipation(self) -> Event:
-        return Event(
-            EventType.Other,
-            "Dissipation",
-            effect=HealingSpellBonus("Dissipation", 30, 0.2),
-            target=self,
-        )
-
     def FeyBlessing(self) -> Event:
         return Event(
             EventType.Heal, "FeyBlessing", int(320 * self.petCoefficient * self.potency)
@@ -121,24 +190,44 @@ class Scholar(Healer):
 
 
 class WhiteMage(Healer):
+    # TODO: 铃兰未添加
     def __init__(self, hp: int, potency: float) -> None:
         super().__init__(
             "WhiteMage",
             hp,
             potency,
-            ["Medica", "MedicaII", "CureIII", "AfflatusRapture"],
+            [
+                "Cure",
+                "CureII",
+                "Regen",
+                "AfflatusSolace",
+                "Medica",
+                "MedicaII",
+                "CureIII",
+                "AfflatusRapture",
+            ],
         )
 
     def updateEvent(self, event: Event) -> Event:
         event = super().updateEvent(event)
-        for effect in self.effectList:
-            if (
-                effect.name == "PlenaryIndulgence"
-                and event.name in self.HealingSpellList
-            ):
-                event.value += 200
-                return event
+        if (
+            event.name
+            in [
+                "Medica",
+                "MedicaII",
+                "CureIII",
+                "AfflatusRapture",
+            ]
+            and self.__checkPI()
+        ):
+            event.value += int(200 * self.potency)
         return event
+
+    def __checkPI(self) -> bool:
+        for effect in self.effectList:
+            if effect.name == "PlenaryIndulgence":
+                return True
+        return False
 
     def PlenaryIndulgence(self) -> Event:
         """全大赦"""
@@ -147,6 +236,88 @@ class WhiteMage(Healer):
             "PlenaryIndulgence",
             effect=Effect("PlenaryIndulgence", 10),
             target=self,
+        )
+
+    # 单奶
+
+    def Cure(self, target: Player | None = None) -> Event:
+        if not target:
+            target = self
+        return Event(
+            EventType.Heal,
+            "Cure",
+            value=int(500 * self.potency),
+            target=target,
+        )
+
+    def CureII(self, target: Player | None = None) -> Event:
+        if not target:
+            target = self
+        return Event(
+            EventType.Heal,
+            "CureII",
+            value=int(800 * self.potency),
+            target=target,
+        )
+
+    def Regen(self, target: Player | None = None) -> Event:
+        if not target:
+            target = self
+        return Event(
+            EventType.Other,
+            "Regen",
+            effect=Hot("Regen", 18, int(250 * self.potency)),
+            target=target,
+        )
+
+    def Benediction(self, target: Player | None = None) -> Event:
+        if not target:
+            target = self
+        return Event(
+            EventType.Heal,
+            "Benediction",
+            value=1000000,
+            target=target,
+        )
+
+    def AfflatusSolace(self, target: Player | None = None) -> Event:
+        if not target:
+            target = self
+        return Event(
+            EventType.Heal,
+            "AfflatusSolace",
+            value=int(800 * self.potency),
+            target=target,
+        )
+
+    def Tetragrammaton(self, target: Player | None = None) -> Event:
+        if not target:
+            target = self
+        return Event(
+            EventType.Heal,
+            "Tetragrammaton",
+            value=int(700 * self.potency),
+            target=target,
+        )
+
+    def DivineBenison(self, target: Player | None = None) -> Event:
+        if not target:
+            target = self
+        return Event(
+            EventType.Other,
+            "DivineBenision",
+            effect=Shield("DivineBenision", 15, int(500 * self.potency)),
+            target=target,
+        )
+
+    def Aquaveil(self, target: Player | None = None) -> Event:
+        if not target:
+            target = self
+        return Event(
+            EventType.Other,
+            "Aquaveil",
+            effect=Mitigation("Aquaveil", 8, 0.15),
+            target=target,
         )
 
     def Medica(self) -> Event:

@@ -14,6 +14,22 @@ class Tank(Player):
             EventType.Other, "Reprisal", effect=Mitigation("Reprisal", 10, 0.1)
         )
 
+    def Vengeance(self) -> Event:
+        return Event(
+            EventType.Other,
+            "Vengeance",
+            effect=Mitigation("Vengeance", 15, 0.3),
+            target=self,
+        )
+
+    def Rampart(self) -> Event:
+        return Event(
+            EventType.Other,
+            "Rampart",
+            effect=Mitigation("Rampart", 15, 0.3),
+            target=self,
+        )
+
 
 class Paladin(Tank):
     def __init__(self, hp: int, potency: float) -> None:
@@ -34,6 +50,38 @@ class Paladin(Tank):
             effect=Mitigation("PassageOfArms", 5, 0.15),
         )
 
+    def Bulwark(self) -> Event:
+        return Event(
+            EventType.Other,
+            "Bulwark",
+            effect=Mitigation("Bulwark", 10, 0.2),
+            target=self,
+        )
+
+    def HolySheltron(self) -> Event:
+        return Event(
+            EventType.Other,
+            "HolySheltron",
+            effect=[
+                Mitigation("HolySheltron", 8, 0.15),
+                Mitigation("Knight'sResolve", 4, 0.15),
+                Hot("Knight'sResolve", 12, int(250 * self.potency)),
+            ],
+            target=self,
+        )
+
+    def Intervention(self, target: Player) -> Event:
+        return Event(
+            EventType.Other,
+            "Intervention",
+            effect=[
+                Mitigation("Intervention", 8, 0.1),
+                Mitigation("Knight'sResolve", 4, 0.1),
+                Hot("Knight'sResolve", 12, int(250 * self.potency)),
+            ],
+            target=target,
+        )
+
 
 class Warrior(Tank):
     def __init__(self, hp: int, potency: float) -> None:
@@ -48,6 +96,28 @@ class Warrior(Tank):
                 Hot("ShakeItOffHot", 15, int(100 * self.potency)),
                 Shield("ShakeItOffShield", 30, int(self.maxHp * 0.15)),
             ],
+        )
+
+    # TODO: 战栗未添加
+    def Bloodwhetting(self) -> Event:
+        return Event(
+            EventType.Other,
+            "Bloodwhetting",
+            effect=[
+                Mitigation("Bloodwhetting", 8, 0.1),
+                Mitigation("StemTheFlow", 4, 0.1),
+                Hot("BloodwhettingHot", 9, int(400 * self.potency)),
+                Shield("StemTheTide", 20, int(400 * self.potency)),
+            ],
+            target=self,
+        )
+
+    def Equilibrium(self) -> Event:
+        return Event(
+            EventType.Heal,
+            "Equilibrium",
+            value=int(1200 * self.potency),
+            effect=Hot("Equilibrium", 15, int(200 * self.potency)),
         )
 
 
@@ -72,4 +142,32 @@ class DarkKnight(Tank):
             EventType.Other,
             "DarkMissionary",
             effect=MagicMitigation("DarkMissionary", 15, 0.1),
+        )
+
+    def DarkMind(self) -> Event:
+        return Event(
+            EventType.Other,
+            "DarkMind",
+            effect=MagicMitigation("DarkMind", 10, 0.2),
+            target=self,
+        )
+
+    def TheBlackestKnight(self, target: Player | None = None) -> Event:
+        if not target:
+            target = self
+        return Event(
+            EventType.Other,
+            "TheBlackestKnight",
+            effect=Shield("TheBlackestKnight", 7, target.maxHp // 4),
+            target=target,
+        )
+
+    def Oblation(self, target: Player | None = None) -> Event:
+        if not target:
+            target = self
+        return Event(
+            EventType.Other,
+            "Oblation",
+            effect=MagicMitigation("Oblation", 10, 0.1),
+            target=target,
         )
