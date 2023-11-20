@@ -1,7 +1,7 @@
 import pandas as pd
 from Jobs.Healer import Scholar, WhiteMage
 from models.player import Player
-from models.effect import Dot, Hot
+from models.effect import DataType
 from models.event import Event, EventType
 
 from copy import deepcopy
@@ -14,17 +14,17 @@ class Fight:
     eventList: list[tuple[float, Event]] = []
     eventIndex = 0
     timeInterval: float = 0.01
+    eventToEffectDict = {
+        EventType.PhysicsDamage: DataType.Physics,
+        EventType.MagicDamage: DataType.Magic,
+        EventType.TrueDamage: DataType.Real,
+        EventType.Heal: DataType.Magic,
+        EventType.Other: DataType.Magic,
+    }
 
     @classmethod
     def addPlayer(cls, player: Player) -> None:
-        player.getEffect(Hot("naturalHeal", 10000, player.maxHp // 100))
         cls.playerList.append(player)
-
-    @classmethod
-    def addDamageEvent(
-        cls, time: float, name: str, value: int, dot: Dot | None = None
-    ) -> None:
-        cls.eventList.append((time, Event(EventType.MagicDamage, name, value=value)))
 
     @classmethod
     def addEvent(cls, time: float, event: Event) -> None:
@@ -32,22 +32,25 @@ class Fight:
 
     @classmethod
     def dealWithEvent(cls, event: Event):
+        # print(type(event.user))
         if type(event.user) == Scholar or type(event.user) == WhiteMage:
             event = event.user.updateEvent(event)
+            # print(event)
         for player in cls.playerList:
-            if event and (not event.target or event.target == player):
-                match event.eventType:
-                    case EventType.Heal:
-                        player.getHeal(event.value)
-                    case EventType.MagicDamage:
-                        player.getDamage(event.value)
+            if not event.target or event.target == player:
+                dataType = cls.eventToEffectDict[event.eventType]
+                if event.eventType == EventType.Heal:
+                    player.getHeal(event.value)
+                elif event.eventType != EventType.Other:
+                    player.getDamage(event.value, dataType)
                 for effect in event.effectList:
-                    player.getEffect(deepcopy(effect))
+                    player.getEffect(deepcopy(effect), dataType)
 
     @classmethod
     def run(cls):
         if not cls.playerList or not cls.eventList:
             return
+        # resultDf: pd.DataFrame = pd.DataFrame(columns=["事件","角色"])
         cls.eventList.sort(key=lambda x: x[0])
         nextEvent: tuple[float, Event] = cls.eventList[cls.eventIndex]
         timeSnapshotList = [
@@ -60,6 +63,8 @@ class Fight:
         for timeSnapshot in timeSnapshotList:
             while timeSnapshot == nextEvent[0]:
                 cls.dealWithEvent(nextEvent[1])
+                # print("After Event " + nextEvent[1].name)
+                cls.showPlayerHp()
                 cls.eventIndex += 1
                 if len(cls.eventList) == cls.eventIndex:  # 所有事件都处理完了
                     break

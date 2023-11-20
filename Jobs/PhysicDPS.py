@@ -24,16 +24,16 @@ class Bard(PhysicDPS):
 
 
 class Dancer(PhysicDPS):
-    def __init__(self, hp: int, potency: float) -> None:
+    def __init__(self, hp: int, potency: float = 0) -> None:
         super().__init__("Dancer", hp, potency)
 
     def Improvisation(self, stack: int = 0) -> Event:
-        stackList = [0.05, 0.06, 0.07, 0.08, 0.1]
+        stackList = [5, 6, 7, 8, 10]
         return Event(
             EventType.Other,
             "Improvisation",
             effect=[
-                Shield("ImprovisationShield", 30, int(self.maxHp * stackList[stack])),
+                Shield("ImprovisationShield", 30, stackList[stack]),
                 Hot("ImprovisationHot", 15, int(100 * self.potency)),
             ],
         )

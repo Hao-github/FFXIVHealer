@@ -64,10 +64,17 @@ class HealingSpellBonus(Effect):
 
 
 class Dot(Effect):
-    def __init__(self, name: str, duration: int, damage: int) -> None:
+    def __init__(
+        self,
+        name: str,
+        duration: int,
+        damage: int,
+        damageType: DataType = DataType.Magic,
+    ) -> None:
         super().__init__(name, duration)
         self.damage: int = damage
         self.timer: Timer = Timer(random() * 3)
+        self.damageType = damageType
 
     def update(self, timeInterval: float) -> bool:
         super().update(timeInterval)
@@ -83,3 +90,15 @@ class Hot(Effect):
     def update(self, timeInterval: float) -> bool:
         super().update(timeInterval)
         return self.timer.update(timeInterval)
+
+
+class DelayHealing(Effect):
+    def __init__(self, name: str, duration: int, healing: int) -> None:
+        super().__init__(name, duration)
+        self.healing: int = healing
+
+    def update(self, timeInterval: float) -> bool:
+        super().update(timeInterval)
+        if self.remainTime > 0:
+            return False
+        return True

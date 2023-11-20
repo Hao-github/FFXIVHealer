@@ -1,5 +1,6 @@
 from .effect import (
     DataType,
+    DelayHealing,
     Dot,
     Effect,
     HealBonus,
@@ -17,7 +18,7 @@ class Player:
         self.name: str = name
         self.maxHp: int = hp
         self.hp: int = hp
-        self.effectList: list[Effect] = []
+        self.effectList: list[Effect] = [Hot("naturalHeal", 10000, hp // 100)]
         self.isSurvival: bool = True
         self.potency: float = potency
 
@@ -60,8 +61,13 @@ class Player:
         """获取buff或者debuff,如果是hot或者dot就要计算快照"""
         if type(effect) == Dot:
             effect.damage = self.__getRealDamage(effect.damage, dataType)
-        elif type(effect) == Hot:
+        elif type(effect) == Hot or type(effect) == DelayHealing:
             effect.healing = self.__getRealHeal(effect.healing, dataType)
+        elif type(effect) == Shield and effect.name in [
+            "ShakeItOffShield",
+            "ImprovisationShield",
+        ]: # 对基于目标最大生命值百分比的盾而非自己的进行特殊处理
+            effect.shieldHp = self.maxHp * effect.shieldHp // 100
         self.effectList.append(effect)
 
     def update(self, timeInterval: float) -> None:
@@ -72,7 +78,7 @@ class Player:
         # 根据计时器变更数据
         for effect in self.effectList:
             if effect.update(timeInterval):
-                if type(effect) == Hot:
+                if type(effect) == Hot or type(effect) == DelayHealing:
                     self.getHeal(effect.healing, dataType=DataType.Real)
                 elif type(effect) == Dot:
                     self.getDamage(effect.damage, dataType=DataType.Real)
@@ -126,6 +132,4 @@ class Player:
             self.effectList,
             1,
         )
-        print(self.effectList)
-        print(ret)
         return ret

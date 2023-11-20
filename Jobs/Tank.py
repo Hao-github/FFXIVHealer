@@ -1,4 +1,4 @@
-from models.effect import MagicMitigation, Mitigation, Shield, Hot
+from models.effect import DelayHealing, MagicMitigation, Mitigation, Shield, Hot
 from models.event import Event, EventType
 from models.player import Player
 
@@ -6,8 +6,9 @@ from models.player import Player
 class Tank(Player):
     def __init__(self, name: str, hp: int, potency: float) -> None:
         super().__init__(name, hp, potency)
-        self.RampartRemainTime = 0
-        self.HugeDefenseRemainTime = 0
+
+    def updateEvent(self, event: Event) -> Event:
+        return event
 
     def Reprisal(self) -> Event:
         return Event(
@@ -34,6 +35,19 @@ class Tank(Player):
 class Paladin(Tank):
     def __init__(self, hp: int, potency: float) -> None:
         super().__init__("Paladin", hp, potency)
+
+    def updateEvent(self, event: Event) -> Event:
+        if event.name == "Intervention":
+            event.effectList.append(
+                Mitigation("Intervention", 8, 0.2 if self.__checkDefense() else 0.1)
+            )
+        return event
+
+    def __checkDefense(self) -> bool:
+        for effect in self.effectList:
+            if effect.name in ["Vengeance", "Rampart"]:
+                return True
+        return False
 
     def DivineVeil(self) -> Event:
         return Event(
@@ -75,7 +89,7 @@ class Paladin(Tank):
             EventType.Other,
             "Intervention",
             effect=[
-                Mitigation("Intervention", 8, 0.1),
+                # Mitigation("Intervention", 8, 0.1),
                 Mitigation("Knight'sResolve", 4, 0.1),
                 Hot("Knight'sResolve", 12, int(250 * self.potency)),
             ],
@@ -94,7 +108,7 @@ class Warrior(Tank):
             value=int(300 * self.potency),
             effect=[
                 Hot("ShakeItOffHot", 15, int(100 * self.potency)),
-                Shield("ShakeItOffShield", 30, int(self.maxHp * 0.15)),
+                Shield("ShakeItOffShield", 30, 15),
             ],
         )
 
@@ -131,6 +145,38 @@ class GunBreaker(Tank):
             "HeartOfLight",
             effect=MagicMitigation("HeartOfLight", 15, 0.1),
         )
+
+    def Aurora(self, target: Player | None = None) -> Event:
+        if not target:
+            target = self
+        return Event(
+            EventType.Other, "Aurora", effect=Hot("Aurora", 18, int(200 * self.potency))
+        )
+
+    def Camouflage(self) -> Event:
+        return Event(
+            EventType.Other,
+            "Camouflage",
+            effect=Mitigation("Camouflage", 20, 0.1),
+            target=self,
+        )
+
+    def HeartOfCorundum(self, target: Player | None = None) -> Event:
+        ret = Event(
+            EventType.Other,
+            "HeartOfCorundum",
+            effect=[
+                Mitigation("HeartOfCorundum", 8, 0.15),
+                Mitigation("ClarityOfCorundum", 4, 0.15),
+                DelayHealing("CatharsisOfCorundum", 20, int(900 * self.potency)),
+            ],
+        )
+        if target:
+            ret.effectList.append(Shield("Brutal", 30, int(200 * self.potency)))
+        else:
+            target = self
+        ret.target = target
+        return ret
 
 
 class DarkKnight(Tank):

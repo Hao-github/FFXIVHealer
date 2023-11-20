@@ -1,5 +1,7 @@
 from copy import deepcopy
+from functools import wraps
 from models.effect import (
+    DelayHealing,
     Effect,
     HealBonus,
     HealingSpellBonus,
@@ -10,6 +12,16 @@ from models.effect import (
 )
 from models.event import Event, EventType
 from models.player import Player
+
+
+def addUser(func):
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        ret: Event = func(self, *args, **kwargs)
+        ret.user = self
+        return ret
+
+    return wrapper
 
 
 class Healer(Player):
@@ -29,13 +41,13 @@ class Healer(Player):
         for effect in event.effectList:
             if type(effect) == Shield:
                 effect.shieldHp = int(effect.shieldHp * percentage)
-            elif type(effect) == Hot:
+            elif type(effect) == Hot or type(effect) == DelayHealing:
                 effect.healing = int(effect.healing * percentage)
         return event
 
 
 class Scholar(Healer):
-    # TODO: 绿帽Excogitation, 回生法Protraction, 连线Aetherpact尚未写入
+    # TODO: 回生法Protraction尚未写入
     def __init__(self, hp: int, potency: int, criticalNum: float) -> None:
         super().__init__("Scholar", hp, potency, ["Succor", "Physicks", "Adloquium"])
         self.petCoefficient: float = 0.95
@@ -50,7 +62,7 @@ class Scholar(Healer):
                 return event
         # 判断是否有秘策增幅
         if (
-            event.name in ["Succor", "Indomitability", "Adloquium"]
+            event.name in ["Adloquium", "Succor", "Indomitability", "Excogitation"]
             and self.__checkRecitation()
         ):
             if event.name == "Adloquium":
@@ -126,22 +138,46 @@ class Scholar(Healer):
             target=target,
         )
 
+    def Excogitation(self, target: Player | None = None) -> Event:
+        if not target:
+            target = self
+        return Event(
+            EventType.Other,
+            "Excogitation",
+            effect=DelayHealing("Excogitation", 45, int(800 * self.potency)),
+            target=target,
+        )
+
+    def Aetherpact(self, time: int, target: Player | None = None) -> Event:
+        if not target:
+            target = self
+        return Event(
+            EventType.Heal,
+            "Aetherpact",
+            effect=Hot(
+                "Aetherpact", time, int(300 * self.potency * self.petCoefficient)
+            ),
+            target=target,
+        )
+
     # 群奶
 
     def WhisperingDawn(self) -> Event:
         return Event(
             EventType.Heal,
             "WhisperingDawn",
-            0,
-            Hot("WhisperingDawn", 21, int(80 * self.potency * self.petCoefficient)),
+            effect=Hot(
+                "WhisperingDawn", 21, int(80 * self.potency * self.petCoefficient)
+            ),
         )
 
+    @addUser
     def Succor(self) -> Event:
         return Event(
             EventType.Heal,
             "Succor",
-            int(200 * self.potency),
-            Shield("Succor", 30, int(320 * self.potency)),
+            value=int(200 * self.potency),
+            effect=Shield("Succor", 30, int(320 * self.potency)),
         )
 
     def FeyIllumination(self) -> Event:

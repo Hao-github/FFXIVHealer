@@ -1,4 +1,4 @@
-from models.effect import HealBonus, MagicMitigation, Mitigation
+from models.effect import HealBonus, Hot, MagicMitigation, Mitigation
 from models.player import Player
 from models.event import Event, EventType
 
@@ -23,4 +23,33 @@ class RedMage(MagicDPS):
                 MagicMitigation("MagickBarrierMMtg", 10, 0.1),
                 HealBonus("MagickBarrierHB", 10, 0.05),
             ],
+        )
+
+    def Vercure(self, target: Player | None = None) -> Event:
+        if not target:
+            target = self
+        return Event(
+            EventType.Heal, "Vercure", value=int(500 * self.potency), target=target
+        )
+
+
+class Summoner(Player):
+    def __init__(self, hp: int, potency: float) -> None:
+        super().__init__("Summoner", hp, potency)
+        self.petCoefficient: float = 0.95
+
+    def EverlastingFlight(self) -> Event:
+        return Event(
+            EventType.Heal,
+            "EverLastingFlight",
+            effect=Hot(
+                "EverLastingFlight", 21, int(100 * self.petCoefficient * self.potency)
+            ),
+        )
+
+    def Rekindle(self, target: Player | None = None) -> Event:
+        if not target:
+            target = self
+        return Event(
+            EventType.Heal, "Rekindle", value=int(400 * self.potency), target=target
         )
