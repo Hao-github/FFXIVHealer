@@ -6,6 +6,7 @@ from .effect import (
     HealBonus,
     HealingSpellBonus,
     Hot,
+    IncreaseMaxHp,
     MagicMitigation,
     Mitigation,
     Shield,
@@ -16,6 +17,7 @@ from functools import reduce
 class Player:
     def __init__(self, name: str, hp: int, potency: float) -> None:
         self.name: str = name
+        self.originalMaxHp: int = hp
         self.maxHp: int = hp
         self.hp: int = hp
         self.effectList: list[Effect] = [Hot("naturalHeal", 10000, hp // 100)]
@@ -57,18 +59,48 @@ class Player:
         """计算治疗数值, 并防止角色血量超上限"""
         self.hp = min(self.maxHp, self.hp + self.__getRealHeal(heal, dataType))
 
+    def getMaxHpIncrease(self, percentage: float) -> None:
+        self.maxHp = int(self.maxHp * (1 + percentage))
+
+    def removeMaxHpIncrease(self, percentage: float) -> None:
+        self.maxHp = int(self.maxHp / (1 + percentage))
+        if self.maxHp < self.originalMaxHp + 10:  # 防止误差
+            self.maxHp = self.originalMaxHp
+        self.getHeal(0)
+
     def getEffect(self, effect: Effect, dataType: DataType = DataType.Magic) -> None:
         """获取buff或者debuff,如果是hot或者dot就要计算快照"""
         if type(effect) == Dot:
             effect.damage = self.__getRealDamage(effect.damage, dataType)
         elif type(effect) == Hot or type(effect) == DelayHealing:
             effect.healing = self.__getRealHeal(effect.healing, dataType)
-        elif type(effect) == Shield and effect.name in [
-            "ShakeItOffShield",
-            "ImprovisationShield",
-        ]: # 对基于目标最大生命值百分比的盾而非自己的进行特殊处理
-            effect.shieldHp = self.maxHp * effect.shieldHp // 100
+        elif type(effect) == Shield:
+            if effect.name in [
+                "ShakeItOffShield",
+                "ImprovisationShield",
+            ]:  # 对基于目标最大生命值百分比的盾而非自己的进行特殊处理
+                effect.shieldHp = self.maxHp * effect.shieldHp // 100
+            else:
+                effect.shieldHp = self.__getRealHeal(effect.shieldHp, dataType)
+        elif type(effect) == IncreaseMaxHp:
+            self.getMaxHpIncrease(effect.percentage)
+
+        # 如果状态列表里已经有盾且新盾小于旧盾值,则不刷新
+        if e := self.findEffect(effect.name):
+            if (
+                type(effect) == Shield
+                and type(e) == Shield
+                and effect.shieldHp < e.shieldHp
+            ):
+                return
+            e.remainTime = 0
         self.effectList.append(effect)
+
+    def findEffect(self, effectName: str) -> Effect | None:
+        for effect in self.effectList:
+            if effect.name == effectName:
+                return effect
+        return None
 
     def update(self, timeInterval: float) -> None:
         # 如果已经死了就不用update了
@@ -82,6 +114,9 @@ class Player:
                     self.getHeal(effect.healing, dataType=DataType.Real)
                 elif type(effect) == Dot:
                     self.getDamage(effect.damage, dataType=DataType.Real)
+                elif type(effect) == IncreaseMaxHp:
+                    # 增加生命值上限的技能到时间了, 减少对应的上限
+                    self.removeMaxHpIncrease(effect.percentage)
 
         # 删除到时的buff
         self.effectList = list(filter(lambda x: x.remainTime > 0, self.effectList))

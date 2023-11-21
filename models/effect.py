@@ -69,12 +69,10 @@ class Dot(Effect):
         name: str,
         duration: int,
         damage: int,
-        damageType: DataType = DataType.Magic,
     ) -> None:
         super().__init__(name, duration)
         self.damage: int = damage
         self.timer: Timer = Timer(random() * 3)
-        self.damageType = damageType
 
     def update(self, timeInterval: float) -> bool:
         super().update(timeInterval)
@@ -96,6 +94,18 @@ class DelayHealing(Effect):
     def __init__(self, name: str, duration: int, healing: int) -> None:
         super().__init__(name, duration)
         self.healing: int = healing
+
+    def update(self, timeInterval: float) -> bool:
+        super().update(timeInterval)
+        if self.remainTime > 0:
+            return False
+        return True
+
+
+class IncreaseMaxHp(Effect):
+    def __init__(self, name: str, duration: int, percentage: float) -> None:
+        super().__init__(name, duration)
+        self.percentage = percentage
 
     def update(self, timeInterval: float) -> bool:
         super().update(timeInterval)

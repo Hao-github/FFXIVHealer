@@ -27,8 +27,12 @@ class Fight:
         cls.playerList.append(player)
 
     @classmethod
-    def addEvent(cls, time: float, event: Event) -> None:
-        cls.eventList.append((time, event))
+    def addEvent(cls, time: float, event: Event | list[Event]) -> None:
+        if isinstance(event, list):
+            for e in event:
+                cls.eventList.append((time, e))
+        else:
+            cls.eventList.append((time, event))
 
     @classmethod
     def dealWithEvent(cls, event: Event):
@@ -61,7 +65,11 @@ class Fight:
             )
         ]
         for timeSnapshot in timeSnapshotList:
-            while timeSnapshot == nextEvent[0]:
+            while (
+                -cls.timeInterval / 2
+                < (timeSnapshot - nextEvent[0])
+                <= cls.timeInterval / 2
+            ):
                 cls.dealWithEvent(nextEvent[1])
                 # print("After Event " + nextEvent[1].name)
                 cls.showPlayerHp()

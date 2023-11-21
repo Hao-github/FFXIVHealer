@@ -1,4 +1,12 @@
-from models.effect import DelayHealing, MagicMitigation, Mitigation, Shield, Hot
+from models.effect import (
+    DelayHealing,
+    HealBonus,
+    IncreaseMaxHp,
+    MagicMitigation,
+    Mitigation,
+    Shield,
+    Hot,
+)
 from models.event import Event, EventType
 from models.player import Player
 
@@ -101,6 +109,21 @@ class Warrior(Tank):
     def __init__(self, hp: int, potency: float) -> None:
         super().__init__("Warrior", hp, potency)
 
+    def updateEvent(self, event: Event) -> Event:
+        if event.name == "ShakeItOff":
+            event.effectList.append(
+                Shield("ShakeItOffShield", 30, self.__checkDefense())
+            )
+        return event
+
+    def __checkDefense(self) -> int:
+        origin = 15
+        for effect in self.effectList:
+            if effect.name in ["Bloodwhetting", "Vengeance", "TrillOfBattle"]:
+                effect.remainTime = 0
+                origin += 2
+        return origin
+
     def ShakeItOff(self) -> Event:
         return Event(
             EventType.Heal,
@@ -112,7 +135,6 @@ class Warrior(Tank):
             ],
         )
 
-    # TODO: 战栗未添加
     def Bloodwhetting(self) -> Event:
         return Event(
             EventType.Other,
@@ -126,12 +148,45 @@ class Warrior(Tank):
             target=self,
         )
 
+    def NascentFlash(self, target: Player) -> list[Event]:
+        return [
+            Event(
+                EventType.Other,
+                "NascentFlash",
+                effect=Hot("NascentFlashHot", 9, int(400 * self.potency)),
+                target=self,
+            ),
+            Event(
+                EventType.Other,
+                "NascentFlash",
+                effect=[
+                    Mitigation("NascentFlash", 8, 0.1),
+                    Mitigation("StemTheFlow", 4, 0.1),
+                    Hot("NascentFlashHot", 9, int(400 * self.potency)),
+                    Shield("StemTheTide", 20, int(400 * self.potency)),
+                ],
+                target=target,
+            ),
+        ]
+
     def Equilibrium(self) -> Event:
         return Event(
             EventType.Heal,
             "Equilibrium",
             value=int(1200 * self.potency),
             effect=Hot("Equilibrium", 15, int(200 * self.potency)),
+        )
+
+    def TrillOfBattle(self) -> Event:
+        return Event(
+            EventType.Heal,
+            "TrillOfBattle",
+            value=int(self.maxHp * 0.2),
+            effect=[
+                HealBonus("TrillOfBattleHB", 10, 0.2),
+                IncreaseMaxHp("TrillOfBattleIMH", 10, 0.2),
+            ],
+            target=self,
         )
 
 
