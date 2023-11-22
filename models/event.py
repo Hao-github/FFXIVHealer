@@ -1,15 +1,6 @@
-from enum import Enum
-
-from models.player import Player
 from models.effect import Effect
+from models.basicEnum import EventType
 
-
-class EventType(Enum):
-    Other = 0
-    Heal = 1
-    PhysicsDamage = 2
-    MagicDamage = 3
-    TrueDamage = 4
 
 class Event:
     def __init__(
@@ -17,18 +8,14 @@ class Event:
         eventType: EventType,
         name: str,
         value: int = 0,
-        effect: list[Effect] | Effect = [],
-        user: Player | None = None,
-        target: Player | None = None,
+        effect: list[Effect] | Effect = []
     ) -> None:
         self.name: str = name
         self.eventType: EventType = eventType
         self.value: int = value
         self.effectList: list[Effect] = []
         if isinstance(effect, list):
-            for e in effect:
-                self.effectList.append(e)
+            self.effectList.extend(effect)
         else:
             self.effectList.append(effect)
-        self.user: Player | None = user
-        self.target: Player | None = target
+        self.hasPrepared: bool = False

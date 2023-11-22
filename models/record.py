@@ -1,0 +1,44 @@
+from models.player import Player
+from models.event import Event
+from queue import PriorityQueue
+
+
+class Record:
+    """
+    用于存放每场战斗中发生的事情
+    在此, 具体含义为user do event to target
+    """
+
+    def __init__(self, event: Event, user: Player, target: Player) -> None:
+        self.user: Player = user
+        self.target: Player = target
+        self.event: Event = event
+
+
+class RecordList:
+    def __init__(self, timeInterval: float) -> None:
+        self.recordqueue: PriorityQueue = PriorityQueue()
+        self.recordIndex: int = 0
+        self.timeInterval: float = timeInterval
+
+    def put(
+        self, time: float, event: Event | list[Event], user: Player, target: Player
+    ) -> None:
+        if isinstance(event, Event):
+            self.recordqueue.put((time, Record(event, user, target)))
+            return
+        for e in event:
+            self.recordqueue.put((time, Record(e, user, target)))
+
+    def get(self) -> Record | None:
+        if self.empty():
+            return None
+        return self.recordqueue.get()[1]
+
+    def happen(self, time: float) -> bool | None:
+        if self.empty():
+            return None
+        return 0 <= (self.recordqueue.queue[0][0] - time) < self.timeInterval
+
+    def empty(self) -> bool:
+        return self.recordqueue.empty()

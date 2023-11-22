@@ -1,90 +1,83 @@
-import pandas as pd
-from Jobs.Healer import Scholar, WhiteMage
-from models.player import Player
-from models.effect import DataType
-from models.event import Event, EventType
-
 from copy import deepcopy
+import pandas as pd
+from models.player import Player
+from models.event import Event
+from models.record import RecordList
 
 
 class Fight:
     playerList: list[Player] = []
 
     # 事件, 数值, 时间
-    eventList: list[tuple[float, Event]] = []
-    eventIndex = 0
+    recordqueue: RecordList = RecordList(0.01)
     timeInterval: float = 0.01
-    eventToEffectDict = {
-        EventType.PhysicsDamage: DataType.Physics,
-        EventType.MagicDamage: DataType.Magic,
-        EventType.TrueDamage: DataType.Real,
-        EventType.Heal: DataType.Magic,
-        EventType.Other: DataType.Magic,
-    }
 
     @classmethod
     def addPlayer(cls, player: Player) -> None:
         cls.playerList.append(player)
 
     @classmethod
-    def addEvent(cls, time: float, event: Event | list[Event]) -> None:
-        if isinstance(event, list):
-            for e in event:
-                cls.eventList.append((time, e))
-        else:
-            cls.eventList.append((time, event))
-
-    @classmethod
-    def dealWithEvent(cls, event: Event):
-        # print(type(event.user))
-        if type(event.user) == Scholar or type(event.user) == WhiteMage:
-            event = event.user.updateEvent(event)
-            # print(event)
+    def addRecord(
+        cls,
+        time: float,
+        event: Event | list[Event],
+        user: Player,
+        target: Player | None = None,
+    ) -> None:
+        if target:
+            cls.recordqueue.put(time, event, user, target)
+            return
         for player in cls.playerList:
-            if not event.target or event.target == player:
-                dataType = cls.eventToEffectDict[event.eventType]
-                if event.eventType == EventType.Heal:
-                    player.getHeal(event.value)
-                elif event.eventType != EventType.Other:
-                    player.getDamage(event.value, dataType)
-                for effect in event.effectList:
-                    player.getEffect(deepcopy(effect), dataType)
+            cls.recordqueue.put(time, deepcopy(event), user, player)
 
     @classmethod
     def run(cls):
-        if not cls.playerList or not cls.eventList:
+        if not cls.playerList:
             return
         # resultDf: pd.DataFrame = pd.DataFrame(columns=["事件","角色"])
-        cls.eventList.sort(key=lambda x: x[0])
-        nextEvent: tuple[float, Event] = cls.eventList[cls.eventIndex]
-        timeSnapshotList = [
-            i * cls.timeInterval
-            for i in range(
-                0,
-                int((cls.eventList[-1][0] + cls.timeInterval) // cls.timeInterval) + 10,
-            )
-        ]
-        for timeSnapshot in timeSnapshotList:
-            while (
-                -cls.timeInterval / 2
-                < (timeSnapshot - nextEvent[0])
-                <= cls.timeInterval / 2
-            ):
-                cls.dealWithEvent(nextEvent[1])
-                # print("After Event " + nextEvent[1].name)
-                cls.showPlayerHp()
-                cls.eventIndex += 1
-                if len(cls.eventList) == cls.eventIndex:  # 所有事件都处理完了
-                    break
-                nextEvent = cls.eventList[cls.eventIndex]
-
+        timeSnapshot: float = 0
+        while True:
+            # 如果已经没有记录要发生了
+            if cls.recordqueue.empty():
+                return
+            # 检查dot和hot判定, 如果dot和hot跳了, 就产生一个没有延迟的prepare事件
             for player in cls.playerList:
-                player.update(cls.timeInterval)
+                cls.recordqueue.put(
+                    timeSnapshot, player.update(cls.timeInterval), player, player
+                )
+            while cls.recordqueue.happen(timeSnapshot):
+                record = cls.recordqueue.get()
+                if not record:
+                    return
+                # 对于prepare事件
+                if not record.event.hasPrepared:
+                    event = record.user.asEventUser(record.event)
+                    event = record.target.asEventTarget(event)
+                    # 经过生效延迟后重新丢入队列
+                    event.hasPrepared = True
+                    cls.recordqueue.put(
+                        timeSnapshot + cls.timeInterval,
+                        event,
+                        record.user,
+                        record.target,
+                    )
+                # 否则直接找target来判定事件
+                else:
+                    record.target.dealWithReadyEvent(record.event)
+
+            timeSnapshot += cls.timeInterval
 
     @classmethod
-    def showPlayerHp(cls):
+    def showInfo(cls, event: Event):
+        print("After Event " + event.name)
         for player in cls.playerList:
+            print("状态列表: [", end="")
+            for effect in player.effectList:
+                if effect.name != "naturalHeal" and effect.remainTime > 0:
+                    print(str(effect) + ", ", end="")
+            print("]")
             print(player.name + " : " + str(player.hp))
+            print("\n")
 
     @classmethod
     def importScholarSkills(cls, df: pd.DataFrame):

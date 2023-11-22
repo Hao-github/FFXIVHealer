@@ -19,10 +19,10 @@ if __name__ == "__main__":
     boss = Boss()
     Fight.addPlayer(sch)
     Fight.addEvent(14.44, boss.createMagicAttack("究极", 60000))
-    Fight.addEvent(14.44, boss.createMagicAttack("究极", 30000))
+    Fight.addEvent(20, boss.createMagicAttack("究极", 30000))
     Fight.addEvent(10, sch.Dissipation())
     Fight.addEvent(11, sch.Recitation())
     Fight.addEvent(15, sch.Succor())
 
     Fight.run()
-    Fight.showPlayerHp()
+    # Fight.showPlayerHp()

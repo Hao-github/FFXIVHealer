@@ -1,5 +1,5 @@
+from models.event import Event
 from .effect import (
-    DataType,
     DelayHealing,
     Dot,
     Effect,
@@ -11,6 +11,7 @@ from .effect import (
     Mitigation,
     Shield,
 )
+from .basicEnum import EventType
 from functools import reduce
 
 
@@ -24,76 +25,71 @@ class Player:
         self.isSurvival: bool = True
         self.potency: float = potency
 
-    def __getRealDamage(self, damage: int, damageType: DataType) -> int:
-        """根据伤害类型计算承受伤害"""
-        if damageType == DataType.Real:
-            return damage
-        if damageType == DataType.Magic:
-            return int(damage * self.totalMagicMitigation)
-        return int(damage * self.totalPhysicsMitigation)
+    def asEventUser(self, event: Event) -> Event:
+        return event
 
-    def __getRealHeal(self, heal: int, healingType: DataType) -> int:
-        """根据治疗类型判断是否吃受疗加成"""
-        if healingType == DataType.Real:
-            return heal
-        return int(heal * self.totalHealBonus)
+    def asEventTarget(self, event: Event) -> Event:
+        if event.eventType == EventType.Heal:
+            return self.updateHealEvent(event, self.totalHealBonus)
+        elif event.eventType == EventType.Other:
+            return event
+        elif event.eventType == EventType.MagicDamage:
+            event = self.calDamageAfterMtg(event, self.totalMagicMitigation)
+        elif event.eventType == EventType.PhysicsDamage:
+            event = self.calDamageAfterMtg(event, self.totalPhysicsMitigation)
+        event.value = self.calDamageAfterShield(event.value)
+        return event
 
-    def getDamage(
-        self,
-        damage: int,
-        dataType: DataType = DataType.Magic,
-    ) -> None:
-        """计算承受伤害,并从盾值中抵消"""
-        damage = self.__getRealDamage(damage, dataType)
+    def calDamageAfterMtg(self, event: Event, percentage: float) -> Event:
+        """对伤害进行快照计算"""
+        event.value = int(event.value * percentage)
+        for effect in event.effectList:
+            if type(effect) == Dot:
+                effect.value = int(effect.value * percentage)
+        return event
+
+    def calDamageAfterShield(self, damage: int) -> int:
         for effect in self.effectList:
             if type(effect) == Shield:
-                if effect.shieldHp > damage:
-                    effect.shieldHp -= damage
-                    return
-                damage -= effect.shieldHp
-                effect.shieldHp = 0
+                if effect.value > damage:
+                    effect.value -= damage
+                    return 0
+                damage -= effect.value
+                effect.value = 0
                 effect.remainTime = 0
-        self.hp -= damage
+        return damage
 
-    def getHeal(self, heal: int, dataType: DataType = DataType.Magic) -> None:
-        """计算治疗数值, 并防止角色血量超上限"""
-        self.hp = min(self.maxHp, self.hp + self.__getRealHeal(heal, dataType))
+    def updateHealEvent(self, event: Event, percentage: float) -> Event:
+        event.value = int(event.value * percentage)
+        for effect in event.effectList:
+            if (
+                type(effect) == Shield
+                or type(effect) == Hot
+                or type(effect) == DelayHealing
+            ):
+                effect.value = int(effect.value * percentage)
+        return event
 
-    def getMaxHpIncrease(self, percentage: float) -> None:
-        self.maxHp = int(self.maxHp * (1 + percentage))
-
-    def removeMaxHpIncrease(self, percentage: float) -> None:
-        self.maxHp = int(self.maxHp / (1 + percentage))
-        if self.maxHp < self.originalMaxHp + 10:  # 防止误差
-            self.maxHp = self.originalMaxHp
-        self.getHeal(0)
-
-    def getEffect(self, effect: Effect, dataType: DataType = DataType.Magic) -> None:
-        """获取buff或者debuff,如果是hot或者dot就要计算快照"""
-        if type(effect) == Dot:
-            effect.damage = self.__getRealDamage(effect.damage, dataType)
-        elif type(effect) == Hot or type(effect) == DelayHealing:
-            effect.healing = self.__getRealHeal(effect.healing, dataType)
-        elif type(effect) == Shield:
+    def getEffect(self, effect: Effect) -> None:
+        """获取buff, 如果是基于自身最大生命值的盾, 则转化为对应数值"""
+        if type(effect) == Shield:
             if effect.name in [
                 "ShakeItOffShield",
                 "ImprovisationShield",
             ]:  # 对基于目标最大生命值百分比的盾而非自己的进行特殊处理
-                effect.shieldHp = self.maxHp * effect.shieldHp // 100
-            else:
-                effect.shieldHp = self.__getRealHeal(effect.shieldHp, dataType)
+                effect.value = self.maxHp * effect.value // 100
         elif type(effect) == IncreaseMaxHp:
-            self.getMaxHpIncrease(effect.percentage)
+            self.maxHp = int(self.maxHp * (1 + effect.percentage))
 
         # 如果状态列表里已经有盾且新盾小于旧盾值,则不刷新
-        if e := self.findEffect(effect.name):
+        if oldEffect := self.findEffect(effect.name):
             if (
                 type(effect) == Shield
-                and type(e) == Shield
-                and effect.shieldHp < e.shieldHp
+                and type(oldEffect) == Shield
+                and effect.value < oldEffect.value
             ):
                 return
-            e.remainTime = 0
+            self.effectList.remove(oldEffect)
         self.effectList.append(effect)
 
     def findEffect(self, effectName: str) -> Effect | None:
@@ -102,69 +98,58 @@ class Player:
                 return effect
         return None
 
-    def update(self, timeInterval: float) -> None:
-        # 如果已经死了就不用update了
-        if not self.isSurvival:
-            return
+    def dealWithReadyEvent(self, event: Event) -> None:
+        if event.eventType == EventType.Heal:
+            self.hp = min(self.maxHp, self.hp + event.value)
+        elif event.eventType != EventType.Other:
+            self.hp -= event.value
+        for effect in event.effectList:
+            self.getEffect(effect)
 
-        # 根据计时器变更数据
+    def update(self, timeInterval: float) -> list[Event]:
+        ret: list[Event] = []
         for effect in self.effectList:
             if effect.update(timeInterval):
                 if type(effect) == Hot or type(effect) == DelayHealing:
-                    self.getHeal(effect.healing, dataType=DataType.Real)
+                    ret.append(Event(EventType.Heal, effect.name, effect.value))
                 elif type(effect) == Dot:
-                    self.getDamage(effect.damage, dataType=DataType.Real)
+                    ret.append(Event(EventType.TrueDamage, effect.name, effect.value))
                 elif type(effect) == IncreaseMaxHp:
                     # 增加生命值上限的技能到时间了, 减少对应的上限
-                    self.removeMaxHpIncrease(effect.percentage)
+                    self.maxHp = int(self.maxHp / (1 + effect.percentage))
+                    if self.maxHp < self.originalMaxHp + 10:  # 防止误差
+                        self.maxHp = self.originalMaxHp
+                    self.hp = max(self.maxHp, self.hp)
 
         # 删除到时的buff
         self.effectList = list(filter(lambda x: x.remainTime > 0, self.effectList))
-        if self.hp <= 0:  # 判断是否死亡
-            self.isSurvival = False
+        return ret
+
+    def totalPercentage(self, myType: type) -> float:
+        if myType not in [Mitigation, MagicMitigation, HealBonus, HealingSpellBonus]:
+            return 1
+        return reduce(
+            lambda x, y: x * (y.percentage if (type(y) == myType) else 1),  # type: ignore
+            self.effectList,
+            1,
+        )
 
     @property
     def totalMagicMitigation(self) -> float:
         """计算魔法减伤"""
-        return reduce(
-            lambda x, y: x
-            * (
-                1
-                - (
-                    y.percentage
-                    if (type(y) == Mitigation or type(y) == MagicMitigation)
-                    else 0
-                )
-            ),
-            self.effectList,
-            1,
-        )
+        return self.totalPercentage(MagicMitigation) * self.totalPercentage(Mitigation)
 
     @property
     def totalPhysicsMitigation(self) -> float:
         """计算物理减伤"""
-        return reduce(
-            lambda x, y: x * (1 - (y.percentage if type(y) == Mitigation else 0)),
-            self.effectList,
-            1,
-        )
+        return self.totalPercentage(Mitigation)
 
     @property
     def totalHealBonus(self) -> float:
         """计算受疗增益"""
-        return reduce(
-            lambda x, y: x * (1 + (y.percentage if type(y) == HealBonus else 0)),
-            self.effectList,
-            1,
-        )
+        return self.totalPercentage(HealBonus)
 
     @property
     def totalHealingSpellBonus(self) -> float:
         """计算治疗魔法增益"""
-        ret = reduce(
-            lambda x, y: x
-            * (1 + (y.percentage if type(y) == HealingSpellBonus else 0)),
-            self.effectList,
-            1,
-        )
-        return ret
+        return self.totalPercentage(HealingSpellBonus)

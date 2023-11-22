@@ -1,14 +1,7 @@
 """
 模拟buff和debuff的模型的文件
 """
-from enum import Enum
 from random import random
-
-
-class DataType(Enum):
-    Physics = 0
-    Magic = 1
-    Real = 2
 
 
 class Timer:
@@ -32,6 +25,14 @@ class Effect:
     def update(self, timeInterval: float) -> None:
         self.remainTime -= timeInterval
 
+    def __str__(self) -> str:
+        return self.name + ": " + str(round(self.remainTime, 2)) + "s"
+
+    def __eq__(self, __value: object) -> bool:
+        if not isinstance(__value, Effect):
+            return False
+        return type(self) == type(__value) and self.name == __value.name
+
 
 class Mitigation(Effect):
     def __init__(self, name: str, duration: int, percentage: float) -> None:
@@ -48,7 +49,7 @@ class MagicMitigation(Effect):
 class Shield(Effect):
     def __init__(self, name: str, duration: int, value: int) -> None:
         super().__init__(name, duration)
-        self.shieldHp: int = value
+        self.value: int = value
 
 
 class HealBonus(Effect):
@@ -68,10 +69,10 @@ class Dot(Effect):
         self,
         name: str,
         duration: int,
-        damage: int,
+        value: int,
     ) -> None:
         super().__init__(name, duration)
-        self.damage: int = damage
+        self.value: int = value
         self.timer: Timer = Timer(random() * 3)
 
     def update(self, timeInterval: float) -> bool:
@@ -80,9 +81,9 @@ class Dot(Effect):
 
 
 class Hot(Effect):
-    def __init__(self, name: str, duration: int, healing: int) -> None:
+    def __init__(self, name: str, duration: int, value: int) -> None:
         super().__init__(name, duration)
-        self.healing: int = healing
+        self.value: int = value
         self.timer: Timer = Timer(random() * 3)
 
     def update(self, timeInterval: float) -> bool:
@@ -91,9 +92,9 @@ class Hot(Effect):
 
 
 class DelayHealing(Effect):
-    def __init__(self, name: str, duration: int, healing: int) -> None:
+    def __init__(self, name: str, duration: int, value: int) -> None:
         super().__init__(name, duration)
-        self.healing: int = healing
+        self.value: int = value
 
     def update(self, timeInterval: float) -> bool:
         super().update(timeInterval)

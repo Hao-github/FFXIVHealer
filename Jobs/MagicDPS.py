@@ -25,12 +25,8 @@ class RedMage(MagicDPS):
             ],
         )
 
-    def Vercure(self, target: Player | None = None) -> Event:
-        if not target:
-            target = self
-        return Event(
-            EventType.Heal, "Vercure", value=int(500 * self.potency), target=target
-        )
+    def Vercure(self) -> Event:
+        return Event(EventType.Heal, "Vercure", value=int(500 * self.potency))
 
 
 class Summoner(Player):
@@ -47,9 +43,5 @@ class Summoner(Player):
             ),
         )
 
-    def Rekindle(self, target: Player | None = None) -> Event:
-        if not target:
-            target = self
-        return Event(
-            EventType.Heal, "Rekindle", value=int(400 * self.potency), target=target
-        )
+    def Rekindle(self) -> Event:
+        return Event(EventType.Heal, "Rekindle", value=int(400 * self.potency))

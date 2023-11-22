@@ -44,18 +44,9 @@ class Healer(Player):
         super().__init__(name, hp, potency)
         self.HealingSpellList: list[str] = spellList
 
-    def updateEvent(self, event: Event) -> Event:
+    def asEventUser(self, event: Event) -> Event:
         if event.name in self.HealingSpellList:
-            self._bonusHealingSpell(event, self.totalHealingSpellBonus)
-        return event
-
-    def _bonusHealingSpell(self, event: Event, percentage: float) -> Event:
-        event.value = int(event.value * percentage)
-        for effect in event.effectList:
-            if type(effect) == Shield:
-                effect.shieldHp = int(effect.shieldHp * percentage)
-            elif type(effect) == Hot or type(effect) == DelayHealing:
-                effect.healing = int(effect.healing * percentage)
+            self.updateHealEvent(event, self.totalHealingSpellBonus)
         return event
 
 
@@ -65,8 +56,8 @@ class Scholar(Healer):
         self.petCoefficient: float = 0.95
         self.criticalNum: float = criticalNum
 
-    def updateEvent(self, event: Event) -> Event:
-        event = super().updateEvent(event)
+    def asEventUser(self, event: Event) -> Event:
+        event = super().asEventUser(event)
         # 判断目标身上是否有盾, 并进行展开
         if event.name == "Deployment":
             if deploySheild := self.__checkAdloquium(event.target):
@@ -79,7 +70,7 @@ class Scholar(Healer):
         ):
             if event.name == "Adloquium":
                 event.effectList.append(Shield("Catalyze", 30, int(event.value * 1.8)))
-            return self._bonusHealingSpell(event, self.criticalNum)
+            return self.updateHealEvent(event, self.criticalNum)
         return event
 
     def __checkRecitation(self) -> bool:
@@ -95,6 +86,7 @@ class Scholar(Healer):
         for effect in target.effectList:
             if effect.name == "Adloquium" and type(effect) == Shield:
                 ret = deepcopy(effect)
+                effect.value = 0
                 effect.remainTime = 0
                 return ret
         return None
@@ -108,7 +100,7 @@ class Scholar(Healer):
         return Event(
             EventType.Other,
             "Dissipation",
-            effect=HealingSpellBonus("Dissipation", 30, 0.2),
+            effect=HealingSpellBonus("Dissipation", 30, 1.2),
             target=self,
         )
 
@@ -205,8 +197,8 @@ class Scholar(Healer):
             EventType.Other,
             "FeyIllumination",
             effect=[
-                MagicMitigation("FeyIlluminationMMtg", 20, 0.05),
-                HealingSpellBonus("FeyIlluminationHSB", 20, 0.1),
+                MagicMitigation("FeyIlluminationMMtg", 20, 0.95),
+                HealingSpellBonus("FeyIlluminationHSB", 20, 1.1),
             ],
         )
 
@@ -264,8 +256,8 @@ class WhiteMage(Healer):
             ],
         )
 
-    def updateEvent(self, event: Event) -> Event:
-        event = super().updateEvent(event)
+    def asEventUser(self, event: Event) -> Event:
+        event = super().asEventUser(event)
         if (
             event.name
             in [
@@ -408,24 +400,33 @@ class WhiteMage(Healer):
             value=int(400 * self.potency),
         )
 
-    def Temperance(self) -> Event:
+    def Temperance(self) -> list[Event]:
         """节制"""
+        return [
+            Event(
+                EventType.Other,
+                "Temperance",
+                effect=[
+                    Mitigation("Temperance", 22, 0.1),
+                ],
+            ),
+            Event(
+                EventType.Other,
+                "Temperance",
+                effect=[
+                    HealingSpellBonus("TemperanceHSB", 22, 0.2),
+                ],
+                target=self,
+            ),
+        ]
+
+    def LiturgyOfTheBell(self) -> Event:
         return Event(
             EventType.Other,
-            "Temperance",
-            effect=[
-                Mitigation("Temperance", 22, 0.1),
-                # HealingSpellBonus("TemperanceHSB", 22, 0.2),
-            ],
+            "LiturgyOfTheBell",
+            effect=Effect("LiturgyOfTheBell5", 20),
+            target=self,
         )
-
-    # def LiturgyOfTheBell(self) -> Event:
-    #     return Event(
-    #         EventType.Other,
-    #         "LiturgyOfTheBell",
-    #         effect=Effect("LiturgyOfTheBell5", 20),
-    #         target=self,
-    #     )
 
 
 class Astrologian(Healer):
@@ -438,8 +439,8 @@ class Astrologian(Healer):
             ["Helios", "AspectedHelios", "Benefic", "BeneficII", "AspectedBenefic"],
         )
 
-    def updateEvent(self, event: Event) -> Event:
-        event = super().updateEvent(event)
+    def asEventUser(self, event: Event) -> Event:
+        event = super().asEventUser(event)
         if event.name == "AspectedHelios" and self.__checkNS():
             event.effectList.append(
                 Shield("AspectedHeliosShield", 30, int(event.value * 1.25))
