@@ -1,7 +1,5 @@
 from __future__ import annotations
-from models.boss import Boss
 from models.event import Event
-from models.record import Record
 from .effect import (
     DelayHealing,
     Dot,
@@ -32,7 +30,7 @@ class Player:
     def asEventUser(self, event: Event, target: Player) -> Event:
         return event
 
-    def asEventTarget(self, event: Event, user: Player | Boss) -> Event:
+    def asEventTarget(self, event: Event, user: Player) -> Event:
         if event.eventType == EventType.Heal:
             event.getPercentage(self.healBonus)
             return event
@@ -88,25 +86,15 @@ class Player:
         for effect in event.effectList:
             self.getEffect(effect)
 
-    def update(self, timeInterval: float) -> list[Record]:
-        ret: list[Record] = []
+    def update(self, timeInterval: float) -> list[Event]:
+        ret: list[Event] = []
         for effect in self.effectList:
             if effect.update(timeInterval):
                 if type(effect) == Hot or type(effect) == DelayHealing:
-                    ret.append(
-                        Record(
-                            Event(EventType.Heal, effect.name, int(effect.value)),
-                            self,
-                            self,
-                        )
-                    )
+                    ret.append(Event(EventType.Heal, effect.name, int(effect.value)))
                 elif type(effect) == Dot:
                     ret.append(
-                        Record(
-                            Event(EventType.TrueDamage, effect.name, int(effect.value)),
-                            self,
-                            self,
-                        )
+                        Event(EventType.TrueDamage, effect.name, int(effect.value))
                     )
                 elif type(effect) == IncreaseMaxHp:
                     # 增加生命值上限的技能到时间了, 减少对应的上限

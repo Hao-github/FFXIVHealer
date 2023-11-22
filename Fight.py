@@ -16,7 +16,7 @@ class Fight:
 
     @classmethod
     def addRecord(cls, time: float, record: Record) -> None:
-        cls.recordQueue.put(time, record)
+        cls.recordQueue.putRecord(time, record)
 
     @classmethod
     def setTimeInterval(cls, timeInterval: float) -> None:
@@ -34,23 +34,34 @@ class Fight:
                 return
             # 检查dot和hot判定, 如果dot和hot跳了, 就产生一个没有延迟的prepare事件
             for player in cls.playerList:
-                cls.recordQueue.put(time, player.update(cls.timeInterval))
+                cls.recordQueue.putEvent(
+                    time, player.update(cls.timeInterval), player, player
+                )
             while cls.recordQueue.happen(time):
                 record = cls.recordQueue.get()
                 if not record:
                     return
                 # 对于prepare事件
                 if not record.prepared:
-                    if isinstance(record.user, Player):
-                        record.event = record.user.asEventUser(
-                            record.event, record.target
-                        )
-                    record.event = record.target.asEventTarget(
-                        record.event, record.user
-                    )
+                    record.event = record.user.asEventUser(record.event, record.target)
                     # 经过生效延迟后重新丢入队列
-                    record.prepared = True
-                    cls.recordQueue.put(time + cls.timeInterval, record)
+                    if record.target == totalPlayer:
+                        for player in cls.playerList:
+                            r = Record(
+                                player.asEventTarget(
+                                    deepcopy(record.event), record.user
+                                ),
+                                record.user,
+                                player,
+                            )
+                            r.prepared = True
+                            cls.recordQueue.putRecord(time + cls.timeInterval, r)
+                    else:
+                        record.prepared = True
+                        record.event = record.target.asEventTarget(
+                            record.event, record.user
+                        )
+                        cls.recordQueue.putRecord(time + cls.timeInterval, record)
                 # 否则直接找target来判定事件
                 else:
                     if record.target == totalPlayer:

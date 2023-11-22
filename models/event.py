@@ -24,3 +24,6 @@ class Event:
         for effect in self.effectList:
             if effect.getSnapshot:
                 effect.value = int(effect.value * percentage)
+
+    def __str__(self) -> str:
+        return self.name + ": " + str(self.value)
