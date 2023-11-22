@@ -1,3 +1,4 @@
+from models.boss import Boss
 from models.player import Player
 from models.event import Event
 from queue import PriorityQueue
@@ -9,10 +10,11 @@ class Record:
     在此, 具体含义为user do event to target
     """
 
-    def __init__(self, event: Event, user: Player, target: Player) -> None:
-        self.user: Player = user
+    def __init__(self, event: Event, user: Player | Boss, target: Player) -> None:
+        self.user: Player | Boss = user
         self.target: Player = target
         self.event: Event = event
+        self.prepared: bool = False
 
 
 class RecordQueue:
@@ -20,14 +22,12 @@ class RecordQueue:
         self.recordqueue: PriorityQueue = PriorityQueue()
         self.timeInterval: float = timeInterval
 
-    def put(
-        self, time: float, event: Event | list[Event], user: Player, target: Player
-    ) -> None:
-        if isinstance(event, Event):
-            self.recordqueue.put((time, Record(event, user, target)))
+    def put(self, time: float, record: Record | list[Record]) -> None:
+        if isinstance(record, Record):
+            self.recordqueue.put((time, record))
             return
-        for e in event:
-            self.recordqueue.put((time, Record(e, user, target)))
+        for r in record:
+            self.recordqueue.put((time, r))
 
     def get(self) -> Record | None:
         if self.empty():

@@ -5,13 +5,14 @@ from random import random
 
 
 class Timer:
-    def __init__(self, initialTime: float = 0):
-        self.__time = initialTime
+    def __init__(self, timeInterval: float):
+        self.__time = random() * timeInterval
+        self.__timeInterval = timeInterval
 
     def update(self, time: float) -> bool:
         self.__time += time
-        if self.__time >= 3:
-            self.__time -= 3
+        if self.__time >= self.__timeInterval:
+            self.__time -= self.__timeInterval
             return True
         return False
 
@@ -52,6 +53,11 @@ class Shield(Effect):
         self.getSnapshot = True
 
 
+class maxHpShield(Effect):
+    def __init__(self, name: str, duration: float, value: float) -> None:
+        super().__init__(name, duration, value)
+
+
 class HealBonus(Effect):
     def __init__(self, name: str, duration: float, value: float) -> None:
         super().__init__(name, duration, value)
@@ -65,7 +71,7 @@ class SpellBonus(Effect):
 class Dot(Effect):
     def __init__(self, name: str, duration: float, value: int) -> None:
         super().__init__(name, duration, value)
-        self.timer: Timer = Timer(random() * 3)
+        self.timer: Timer = Timer(3)
         self.getSnapshot = True
 
     def update(self, timeInterval: float) -> bool:
@@ -74,9 +80,11 @@ class Dot(Effect):
 
 
 class Hot(Effect):
-    def __init__(self, name: str, duration: float, value: int) -> None:
+    def __init__(
+        self, name: str, duration: float, value: int, timeInterval: float = 3
+    ) -> None:
         super().__init__(name, duration, value)
-        self.timer: Timer = Timer(random() * 3)
+        self.timer: Timer = Timer(timeInterval)
         self.getSnapshot = True
 
     def update(self, timeInterval: float) -> bool:

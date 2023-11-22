@@ -8,4 +8,4 @@ class MeleeDPS(Player):
         super().__init__(name, hp, potency)
 
     def Feint(self) -> Event:
-        return Event(EventType.Other, "Feint", effect=Mitigation("Feint", 10, 0.05))
+        return Event(EventType.Other, "Feint", effect=Mitigation("Feint", 10, 0.95))

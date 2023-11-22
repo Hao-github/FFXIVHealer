@@ -6,6 +6,7 @@ from models.effect import (
     Mitigation,
     Shield,
     Hot,
+    maxHpShield,
 )
 from models.event import Event, EventType
 from models.player import Player
@@ -17,7 +18,7 @@ class Tank(Player):
 
     def Reprisal(self) -> Event:
         return Event(
-            EventType.Other, "Reprisal", effect=Mitigation("Reprisal", 10, 0.1)
+            EventType.Other, "Reprisal", effect=Mitigation("Reprisal", 10, 0.9)
         )
 
     def Vengeance(self) -> Event:
@@ -41,7 +42,7 @@ class Paladin(Tank):
         return event
 
     def __checkDefense(self) -> bool:
-        if self.__searchEffect("Rampart") or self.__searchEffect("Vengeance"):
+        if self._searchEffect("Rampart") or self._searchEffect("Vengeance"):
             return True
         return False
 
@@ -93,7 +94,7 @@ class Warrior(Tank):
     def updateEvent(self, event: Event) -> Event:
         if event.name == "ShakeItOff":
             event.effectList.append(
-                Shield("ShakeItOffShield", 30, self.__checkDefense())
+                maxHpShield("ShakeItOffShield", 30, self.__checkDefense())
             )
         return event
 
@@ -110,10 +111,7 @@ class Warrior(Tank):
             EventType.Heal,
             "ShakeItOff",
             value=int(300 * self.potency),
-            effect=[
-                Hot("ShakeItOffHot", 15, int(100 * self.potency)),
-                Shield("ShakeItOffShield", 30, 15),
-            ],
+            effect=Hot("ShakeItOffHot", 15, int(100 * self.potency)),
         )
 
     def Bloodwhetting(self) -> Event:
@@ -139,9 +137,11 @@ class Warrior(Tank):
                 EventType.Other,
                 "NascentFlash",
                 effect=[
-                    Mitigation("NascentFlash", 8, 0.1),
-                    Mitigation("StemTheFlow", 4, 0.1),
-                    Hot("NascentFlashHot", 9, int(400 * self.potency)),
+                    Mitigation("NascentFlash", 8, 0.9),
+                    Mitigation("StemTheFlow", 4, 0.9),
+                    Hot(
+                        "NascentFlashHot", 7.5, int(400 * self.potency), timeInterval=3
+                    ),
                     Shield("StemTheTide", 20, int(400 * self.potency)),
                 ],
             ),
@@ -157,12 +157,11 @@ class Warrior(Tank):
 
     def TrillOfBattle(self) -> Event:
         return Event(
-            EventType.Heal,
+            EventType.Other,
             "TrillOfBattle",
-            value=int(self.maxHp * 0.2),
             effect=[
-                HealBonus("TrillOfBattleHB", 10, 0.2),
-                IncreaseMaxHp("TrillOfBattleIMH", 10, 0.2),
+                HealBonus("TrillOfBattleHB", 10, 1.2),
+                IncreaseMaxHp("TrillOfBattleIMH", 10, 1.2),
             ],
         )
 
@@ -181,12 +180,10 @@ class GunBreaker(Tank):
         return Event(
             EventType.Other,
             "HeartOfLight",
-            effect=MagicMitigation("HeartOfLight", 15, 0.1),
+            effect=MagicMitigation("HeartOfLight", 15, 0.9),
         )
 
-    def Aurora(self, target: Player | None = None) -> Event:
-        if not target:
-            target = self
+    def Aurora(self) -> Event:
         return Event(
             EventType.Other, "Aurora", effect=Hot("Aurora", 18, int(200 * self.potency))
         )
@@ -195,17 +192,16 @@ class GunBreaker(Tank):
         return Event(
             EventType.Other,
             "Camouflage",
-            effect=Mitigation("Camouflage", 20, 0.1),
+            effect=Mitigation("Camouflage", 20, 0.9),
         )
 
-    # TODO: 添加残暴弹
     def HeartOfCorundum(self) -> Event:
         return Event(
             EventType.Other,
             "HeartOfCorundum",
             effect=[
-                Mitigation("HeartOfCorundum", 8, 0.15),
-                Mitigation("ClarityOfCorundum", 4, 0.15),
+                Mitigation("HeartOfCorundum", 8, 0.85),
+                Mitigation("ClarityOfCorundum", 4, 0.85),
                 DelayHealing("CatharsisOfCorundum", 20, int(900 * self.potency)),
             ],
         )
@@ -213,32 +209,32 @@ class GunBreaker(Tank):
 
 class DarkKnight(Tank):
     def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("GunBreaker", hp, potency)
+        super().__init__("DarkKnight", hp, potency)
 
     def DarkMissionary(self) -> Event:
         return Event(
             EventType.Other,
             "DarkMissionary",
-            effect=MagicMitigation("DarkMissionary", 15, 0.1),
+            effect=MagicMitigation("DarkMissionary", 15, 0.9),
         )
 
     def DarkMind(self) -> Event:
         return Event(
             EventType.Other,
             "DarkMind",
-            effect=MagicMitigation("DarkMind", 10, 0.2),
+            effect=MagicMitigation("DarkMind", 10, 0.8),
         )
 
     def TheBlackestKnight(self) -> Event:
         return Event(
             EventType.Other,
             "TheBlackestKnight",
-            effect=Shield("TheBlackestKnight", 7, 25000),
+            effect=maxHpShield("TheBlackestKnight", 7, 25),
         )
 
     def Oblation(self) -> Event:
         return Event(
             EventType.Other,
             "Oblation",
-            effect=MagicMitigation("Oblation", 10, 0.1),
+            effect=MagicMitigation("Oblation", 10, 0.9),
         )

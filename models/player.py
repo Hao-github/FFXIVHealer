@@ -1,6 +1,7 @@
-
 from __future__ import annotations
+from models.boss import Boss
 from models.event import Event
+from models.record import Record
 from .effect import (
     DelayHealing,
     Dot,
@@ -12,6 +13,7 @@ from .effect import (
     MagicMitigation,
     Mitigation,
     Shield,
+    maxHpShield,
 )
 from .basicEnum import EventType
 from functools import reduce
@@ -30,7 +32,7 @@ class Player:
     def asEventUser(self, event: Event, target: Player) -> Event:
         return event
 
-    def asEventTarget(self, event: Event, user: Player) -> Event:
+    def asEventTarget(self, event: Event, user: Player | Boss) -> Event:
         if event.eventType == EventType.Heal:
             event.getPercentage(self.healBonus)
             return event
@@ -56,19 +58,19 @@ class Player:
 
     def getEffect(self, effect: Effect) -> None:
         """获取buff, 如果是基于自身最大生命值的盾, 则转化为对应数值"""
-        if type(effect) == Shield:
-            if effect.name in [
-                "ShakeItOffShield",
-                "ImprovisationShield",
-            ]:  # 对基于目标最大生命值百分比的盾而非自己的进行特殊处理
-                effect.value = self.maxHp * effect.value // 100
+
+        # 对基于目标最大生命值百分比的盾而非自己的进行特殊处理
+        if type(effect) == maxHpShield:
+            effect = Shield(
+                effect.name, effect.duration, int(self.maxHp * effect.value / 100)
+            )
         elif type(effect) == IncreaseMaxHp:
             increaseNum = int(self.maxHp * effect.value)
             self.maxHp += increaseNum
             self.hp += increaseNum
 
         # 如果状态列表里已经有盾且新盾小于旧盾值,则不刷新
-        if oldEffect := self.__searchEffect(effect.name):
+        if oldEffect := self._searchEffect(effect.name):
             if (
                 type(effect) == Shield
                 and type(oldEffect) == Shield
@@ -86,15 +88,25 @@ class Player:
         for effect in event.effectList:
             self.getEffect(effect)
 
-    def update(self, timeInterval: float) -> list[Event]:
-        ret: list[Event] = []
+    def update(self, timeInterval: float) -> list[Record]:
+        ret: list[Record] = []
         for effect in self.effectList:
             if effect.update(timeInterval):
                 if type(effect) == Hot or type(effect) == DelayHealing:
-                    ret.append(Event(EventType.Heal, effect.name, int(effect.value)))
+                    ret.append(
+                        Record(
+                            Event(EventType.Heal, effect.name, int(effect.value)),
+                            self,
+                            self,
+                        )
+                    )
                 elif type(effect) == Dot:
                     ret.append(
-                        Event(EventType.TrueDamage, effect.name, int(effect.value))
+                        Record(
+                            Event(EventType.TrueDamage, effect.name, int(effect.value)),
+                            self,
+                            self,
+                        )
                     )
                 elif type(effect) == IncreaseMaxHp:
                     # 增加生命值上限的技能到时间了, 减少对应的上限
@@ -111,7 +123,7 @@ class Player:
         if myType not in [Mitigation, MagicMitigation, HealBonus, SpellBonus]:
             return 1
         return reduce(
-            lambda x, y: x * (y.percentage if (type(y) == myType) else 1),  # type: ignore
+            lambda x, y: x * (y.value if (type(y) == myType) else 1),  # type: ignore
             self.effectList,
             1,
         )
@@ -136,8 +148,11 @@ class Player:
         """计算治疗魔法增益"""
         return self.totalPercentage(SpellBonus)
 
-    def __searchEffect(self, name: str) -> Effect | None:
+    def _searchEffect(self, name: str) -> Effect | None:
         for effect in self.effectList:
             if effect.name == name:
                 return effect
         return None
+
+
+totalPlayer = Player("totalPlayer", 0, 0)

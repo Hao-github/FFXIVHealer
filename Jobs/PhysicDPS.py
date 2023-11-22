@@ -1,4 +1,4 @@
-from models.effect import Mitigation, HealBonus, Shield, Hot
+from models.effect import Mitigation, HealBonus, Hot, maxHpShield
 from models.player import Player
 from models.event import Event, EventType
 
@@ -8,7 +8,9 @@ class PhysicDPS(Player):
         super().__init__(name, hp, potency)
 
     def Tactician(self) -> Event:
-        return Event(EventType.Other, "Feint", effect=Mitigation("Tactician", 15, 0.1))
+        return Event(
+            EventType.Other, "Tactician", effect=Mitigation("Tactician", 15, 0.9)
+        )
 
 
 class Bard(PhysicDPS):
@@ -19,7 +21,7 @@ class Bard(PhysicDPS):
         return Event(
             EventType.Other,
             "NaturesMinne",
-            effect=HealBonus("NaturesMinne", 15, 0.15),
+            effect=HealBonus("NaturesMinne", 15, 1.15),
         )
 
 
@@ -33,7 +35,7 @@ class Dancer(PhysicDPS):
             EventType.Other,
             "Improvisation",
             effect=[
-                Shield("ImprovisationShield", 30, stackList[stack]),
+                maxHpShield("ImprovisationShield", 30, stackList[stack]),
                 Hot("ImprovisationHot", 15, int(100 * self.potency)),
             ],
         )
@@ -48,5 +50,5 @@ class Machinist(Player):
 
     def Dismantle(self) -> Event:
         return Event(
-            EventType.Other, "Dismantle", effect=Mitigation("Dismantle", 10, 0.1)
+            EventType.Other, "Dismantle", effect=Mitigation("Dismantle", 10, 0.9)
         )

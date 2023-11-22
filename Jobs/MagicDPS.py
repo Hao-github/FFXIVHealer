@@ -8,7 +8,7 @@ class MagicDPS(Player):
         super().__init__(name, hp, potency)
 
     def Addle(self) -> Event:
-        return Event(EventType.Other, "Addle", effect=Mitigation("Addle", 10, 0.1))
+        return Event(EventType.Other, "Addle", effect=Mitigation("Addle", 10, 0.9))
 
 
 class RedMage(MagicDPS):
@@ -20,8 +20,8 @@ class RedMage(MagicDPS):
             EventType.Other,
             "MagickBarrier",
             effect=[
-                MagicMitigation("MagickBarrierMMtg", 10, 0.1),
-                HealBonus("MagickBarrierHB", 10, 0.05),
+                MagicMitigation("MagickBarrierMMtg", 10, 0.9),
+                HealBonus("MagickBarrierHB", 10, 1.05),
             ],
         )
 
