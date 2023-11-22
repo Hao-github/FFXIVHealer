@@ -15,9 +15,6 @@ class Tank(Player):
     def __init__(self, name: str, hp: int, potency: float) -> None:
         super().__init__(name, hp, potency)
 
-    def updateEvent(self, event: Event) -> Event:
-        return event
-
     def Reprisal(self) -> Event:
         return Event(
             EventType.Other, "Reprisal", effect=Mitigation("Reprisal", 10, 0.1)
@@ -25,26 +22,18 @@ class Tank(Player):
 
     def Vengeance(self) -> Event:
         return Event(
-            EventType.Other,
-            "Vengeance",
-            effect=Mitigation("Vengeance", 15, 0.3),
-            target=self,
+            EventType.Other, "Vengeance", effect=Mitigation("Vengeance", 15, 0.7)
         )
 
     def Rampart(self) -> Event:
-        return Event(
-            EventType.Other,
-            "Rampart",
-            effect=Mitigation("Rampart", 15, 0.3),
-            target=self,
-        )
+        return Event(EventType.Other, "Rampart", effect=Mitigation("Rampart", 20, 0.8))
 
 
 class Paladin(Tank):
     def __init__(self, hp: int, potency: float) -> None:
         super().__init__("Paladin", hp, potency)
 
-    def updateEvent(self, event: Event) -> Event:
+    def asEventUser(self, event: Event) -> Event:
         if event.name == "Intervention":
             event.effectList.append(
                 Mitigation("Intervention", 8, 0.2 if self.__checkDefense() else 0.1)
@@ -52,9 +41,8 @@ class Paladin(Tank):
         return event
 
     def __checkDefense(self) -> bool:
-        for effect in self.effectList:
-            if effect.name in ["Vengeance", "Rampart"]:
-                return True
+        if self.__searchEffect("Rampart") or self.__searchEffect("Vengeance"):
+            return True
         return False
 
     def DivineVeil(self) -> Event:
@@ -73,12 +61,7 @@ class Paladin(Tank):
         )
 
     def Bulwark(self) -> Event:
-        return Event(
-            EventType.Other,
-            "Bulwark",
-            effect=Mitigation("Bulwark", 10, 0.2),
-            target=self,
-        )
+        return Event(EventType.Other, "Bulwark", effect=Mitigation("Bulwark", 10, 0.2))
 
     def HolySheltron(self) -> Event:
         return Event(
@@ -89,10 +72,9 @@ class Paladin(Tank):
                 Mitigation("Knight'sResolve", 4, 0.15),
                 Hot("Knight'sResolve", 12, int(250 * self.potency)),
             ],
-            target=self,
         )
 
-    def Intervention(self, target: Player) -> Event:
+    def Intervention(self) -> Event:
         return Event(
             EventType.Other,
             "Intervention",
@@ -101,7 +83,6 @@ class Paladin(Tank):
                 Mitigation("Knight'sResolve", 4, 0.1),
                 Hot("Knight'sResolve", 12, int(250 * self.potency)),
             ],
-            target=target,
         )
 
 
@@ -145,16 +126,14 @@ class Warrior(Tank):
                 Hot("BloodwhettingHot", 9, int(400 * self.potency)),
                 Shield("StemTheTide", 20, int(400 * self.potency)),
             ],
-            target=self,
         )
 
-    def NascentFlash(self, target: Player) -> list[Event]:
+    def NascentFlash(self) -> list[Event]:
         return [
             Event(
                 EventType.Other,
                 "NascentFlash",
                 effect=Hot("NascentFlashHot", 9, int(400 * self.potency)),
-                target=self,
             ),
             Event(
                 EventType.Other,
@@ -165,7 +144,6 @@ class Warrior(Tank):
                     Hot("NascentFlashHot", 9, int(400 * self.potency)),
                     Shield("StemTheTide", 20, int(400 * self.potency)),
                 ],
-                target=target,
             ),
         ]
 
@@ -186,13 +164,18 @@ class Warrior(Tank):
                 HealBonus("TrillOfBattleHB", 10, 0.2),
                 IncreaseMaxHp("TrillOfBattleIMH", 10, 0.2),
             ],
-            target=self,
         )
 
 
 class GunBreaker(Tank):
     def __init__(self, hp: int, potency: float) -> None:
         super().__init__("GunBreaker", hp, potency)
+
+    def asEventUser(self, event: Event, target: Player) -> Event:
+        event = super().asEventUser(event, target)
+        if target != self:
+            event.effectList.append(Shield("Brutal", 30, int(200 * self.potency)))
+        return event
 
     def HeartOfLight(self) -> Event:
         return Event(
@@ -213,11 +196,11 @@ class GunBreaker(Tank):
             EventType.Other,
             "Camouflage",
             effect=Mitigation("Camouflage", 20, 0.1),
-            target=self,
         )
 
-    def HeartOfCorundum(self, target: Player | None = None) -> Event:
-        ret = Event(
+    # TODO: 添加残暴弹
+    def HeartOfCorundum(self) -> Event:
+        return Event(
             EventType.Other,
             "HeartOfCorundum",
             effect=[
@@ -226,12 +209,6 @@ class GunBreaker(Tank):
                 DelayHealing("CatharsisOfCorundum", 20, int(900 * self.potency)),
             ],
         )
-        if target:
-            ret.effectList.append(Shield("Brutal", 30, int(200 * self.potency)))
-        else:
-            target = self
-        ret.target = target
-        return ret
 
 
 class DarkKnight(Tank):
@@ -250,25 +227,18 @@ class DarkKnight(Tank):
             EventType.Other,
             "DarkMind",
             effect=MagicMitigation("DarkMind", 10, 0.2),
-            target=self,
         )
 
-    def TheBlackestKnight(self, target: Player | None = None) -> Event:
-        if not target:
-            target = self
+    def TheBlackestKnight(self) -> Event:
         return Event(
             EventType.Other,
             "TheBlackestKnight",
-            effect=Shield("TheBlackestKnight", 7, target.maxHp // 4),
-            target=target,
+            effect=Shield("TheBlackestKnight", 7, 25000),
         )
 
-    def Oblation(self, target: Player | None = None) -> Event:
-        if not target:
-            target = self
+    def Oblation(self) -> Event:
         return Event(
             EventType.Other,
             "Oblation",
             effect=MagicMitigation("Oblation", 10, 0.1),
-            target=target,
         )

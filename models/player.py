@@ -1,10 +1,12 @@
+
+from __future__ import annotations
 from models.event import Event
 from .effect import (
     DelayHealing,
     Dot,
     Effect,
     HealBonus,
-    HealingSpellBonus,
+    SpellBonus,
     Hot,
     IncreaseMaxHp,
     MagicMitigation,
@@ -25,27 +27,20 @@ class Player:
         self.isSurvival: bool = True
         self.potency: float = potency
 
-    def asEventUser(self, event: Event) -> Event:
+    def asEventUser(self, event: Event, target: Player) -> Event:
         return event
 
-    def asEventTarget(self, event: Event) -> Event:
+    def asEventTarget(self, event: Event, user: Player) -> Event:
         if event.eventType == EventType.Heal:
-            return self.updateHealEvent(event, self.totalHealBonus)
+            event.getPercentage(self.healBonus)
+            return event
         elif event.eventType == EventType.Other:
             return event
         elif event.eventType == EventType.MagicDamage:
-            event = self.calDamageAfterMtg(event, self.totalMagicMitigation)
+            event.getPercentage(self.magicMitigation)
         elif event.eventType == EventType.PhysicsDamage:
-            event = self.calDamageAfterMtg(event, self.totalPhysicsMitigation)
+            event.getPercentage(self.physicsMitigation)
         event.value = self.calDamageAfterShield(event.value)
-        return event
-
-    def calDamageAfterMtg(self, event: Event, percentage: float) -> Event:
-        """对伤害进行快照计算"""
-        event.value = int(event.value * percentage)
-        for effect in event.effectList:
-            if type(effect) == Dot:
-                effect.value = int(effect.value * percentage)
         return event
 
     def calDamageAfterShield(self, damage: int) -> int:
@@ -54,21 +49,10 @@ class Player:
                 if effect.value > damage:
                     effect.value -= damage
                     return 0
-                damage -= effect.value
+                damage -= int(effect.value)
                 effect.value = 0
                 effect.remainTime = 0
         return damage
-
-    def updateHealEvent(self, event: Event, percentage: float) -> Event:
-        event.value = int(event.value * percentage)
-        for effect in event.effectList:
-            if (
-                type(effect) == Shield
-                or type(effect) == Hot
-                or type(effect) == DelayHealing
-            ):
-                effect.value = int(effect.value * percentage)
-        return event
 
     def getEffect(self, effect: Effect) -> None:
         """获取buff, 如果是基于自身最大生命值的盾, 则转化为对应数值"""
@@ -79,10 +63,12 @@ class Player:
             ]:  # 对基于目标最大生命值百分比的盾而非自己的进行特殊处理
                 effect.value = self.maxHp * effect.value // 100
         elif type(effect) == IncreaseMaxHp:
-            self.maxHp = int(self.maxHp * (1 + effect.percentage))
+            increaseNum = int(self.maxHp * effect.value)
+            self.maxHp += increaseNum
+            self.hp += increaseNum
 
         # 如果状态列表里已经有盾且新盾小于旧盾值,则不刷新
-        if oldEffect := self.findEffect(effect.name):
+        if oldEffect := self.__searchEffect(effect.name):
             if (
                 type(effect) == Shield
                 and type(oldEffect) == Shield
@@ -91,12 +77,6 @@ class Player:
                 return
             self.effectList.remove(oldEffect)
         self.effectList.append(effect)
-
-    def findEffect(self, effectName: str) -> Effect | None:
-        for effect in self.effectList:
-            if effect.name == effectName:
-                return effect
-        return None
 
     def dealWithReadyEvent(self, event: Event) -> None:
         if event.eventType == EventType.Heal:
@@ -111,12 +91,14 @@ class Player:
         for effect in self.effectList:
             if effect.update(timeInterval):
                 if type(effect) == Hot or type(effect) == DelayHealing:
-                    ret.append(Event(EventType.Heal, effect.name, effect.value))
+                    ret.append(Event(EventType.Heal, effect.name, int(effect.value)))
                 elif type(effect) == Dot:
-                    ret.append(Event(EventType.TrueDamage, effect.name, effect.value))
+                    ret.append(
+                        Event(EventType.TrueDamage, effect.name, int(effect.value))
+                    )
                 elif type(effect) == IncreaseMaxHp:
                     # 增加生命值上限的技能到时间了, 减少对应的上限
-                    self.maxHp = int(self.maxHp / (1 + effect.percentage))
+                    self.maxHp = int(self.maxHp / (1 + effect.value))
                     if self.maxHp < self.originalMaxHp + 10:  # 防止误差
                         self.maxHp = self.originalMaxHp
                     self.hp = max(self.maxHp, self.hp)
@@ -126,7 +108,7 @@ class Player:
         return ret
 
     def totalPercentage(self, myType: type) -> float:
-        if myType not in [Mitigation, MagicMitigation, HealBonus, HealingSpellBonus]:
+        if myType not in [Mitigation, MagicMitigation, HealBonus, SpellBonus]:
             return 1
         return reduce(
             lambda x, y: x * (y.percentage if (type(y) == myType) else 1),  # type: ignore
@@ -135,21 +117,27 @@ class Player:
         )
 
     @property
-    def totalMagicMitigation(self) -> float:
+    def magicMitigation(self) -> float:
         """计算魔法减伤"""
         return self.totalPercentage(MagicMitigation) * self.totalPercentage(Mitigation)
 
     @property
-    def totalPhysicsMitigation(self) -> float:
+    def physicsMitigation(self) -> float:
         """计算物理减伤"""
         return self.totalPercentage(Mitigation)
 
     @property
-    def totalHealBonus(self) -> float:
+    def healBonus(self) -> float:
         """计算受疗增益"""
         return self.totalPercentage(HealBonus)
 
     @property
-    def totalHealingSpellBonus(self) -> float:
+    def spellBonus(self) -> float:
         """计算治疗魔法增益"""
-        return self.totalPercentage(HealingSpellBonus)
+        return self.totalPercentage(SpellBonus)
+
+    def __searchEffect(self, name: str) -> Effect | None:
+        for effect in self.effectList:
+            if effect.name == name:
+                return effect
+        return None

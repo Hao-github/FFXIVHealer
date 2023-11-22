@@ -15,10 +15,9 @@ class Record:
         self.event: Event = event
 
 
-class RecordList:
+class RecordQueue:
     def __init__(self, timeInterval: float) -> None:
         self.recordqueue: PriorityQueue = PriorityQueue()
-        self.recordIndex: int = 0
         self.timeInterval: float = timeInterval
 
     def put(

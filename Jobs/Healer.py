@@ -1,10 +1,8 @@
-from copy import deepcopy
-from functools import wraps
 from models.effect import (
     DelayHealing,
     Effect,
     HealBonus,
-    HealingSpellBonus,
+    SpellBonus,
     Hot,
     IncreaseMaxHp,
     MagicMitigation,
@@ -15,161 +13,91 @@ from models.event import Event, EventType
 from models.player import Player
 
 
-def addUser(func):
-    @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        ret: Event = func(self, *args, **kwargs)
-        ret.user = self
-        return ret
-
-    return wrapper
-
-
-def singleTarget(func):
-    @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        ret: Event = func(self, *args, **kwargs)
-        ret.user = self
-        if not ret.target:
-            ret.target = self
-        return ret
-
-    return wrapper
-
-
 class Healer(Player):
     def __init__(
         self, name: str, hp: int, potency: float, spellList: list[str]
     ) -> None:
         super().__init__(name, hp, potency)
-        self.HealingSpellList: list[str] = spellList
+        self.spellList: list[str] = spellList
 
-    def asEventUser(self, event: Event) -> Event:
-        if event.name in self.HealingSpellList:
-            self.updateHealEvent(event, self.totalHealingSpellBonus)
+    def asEventUser(self, event: Event, target: Player) -> Event:
+        if event.name in self.spellList:
+            event.getPercentage(self.spellBonus)
         return event
 
 
 class Scholar(Healer):
+    # TODO: 展开未更新
+
     def __init__(self, hp: int, potency: int, criticalNum: float) -> None:
         super().__init__("Scholar", hp, potency, ["Succor", "Physicks", "Adloquium"])
         self.petCoefficient: float = 0.95
         self.criticalNum: float = criticalNum
 
-    def asEventUser(self, event: Event) -> Event:
-        event = super().asEventUser(event)
-        # 判断目标身上是否有盾, 并进行展开
-        if event.name == "Deployment":
-            if deploySheild := self.__checkAdloquium(event.target):
-                event.effectList.append(deploySheild)
-                return event
-        # 判断是否有秘策增幅
-        if (
-            event.name in ["Adloquium", "Succor", "Indomitability", "Excogitation"]
-            and self.__checkRecitation()
-        ):
+    def asEventUser(self, event: Event, target: Player) -> Event:
+        event = super().asEventUser(event, target)
+        if event.name not in ["Adloquium", "Succor", "Indomitability", "Excogitation"]:
+            return event
+        if effect := self.__searchEffect("Recitation"):
+            effect.remainTime = 0
             if event.name == "Adloquium":
                 event.effectList.append(Shield("Catalyze", 30, int(event.value * 1.8)))
-            return self.updateHealEvent(event, self.criticalNum)
+            event.getPercentage(self.criticalNum)
         return event
 
-    def __checkRecitation(self) -> bool:
-        for effect in self.effectList:
-            if effect.name == "Recitation":
-                effect.remainTime = 0
-                return True
-        return False
-
-    def __checkAdloquium(self, target: Player | None) -> Shield | None:
-        if not target:
-            return None
-        for effect in target.effectList:
-            if effect.name == "Adloquium" and type(effect) == Shield:
-                ret = deepcopy(effect)
-                effect.value = 0
-                effect.remainTime = 0
-                return ret
-        return None
-
-    # buff类技能
-
     def Recitation(self) -> Event:
-        return Event(EventType.Other, "Recitation", effect=Effect("Recitation", 15))
+        return Event(EventType.Other, "Recitation", effect=Effect("Recitation", 15, 0))
 
     def Dissipation(self) -> Event:
         return Event(
             EventType.Other,
             "Dissipation",
-            effect=HealingSpellBonus("Dissipation", 30, 1.2),
-            target=self,
+            effect=SpellBonus("Dissipation", 30, 0.2),
         )
 
-    @singleTarget
-    def Deployment(self, target: Player | None = None) -> Event:
-        return Event(EventType.Other, "Deployment", target=target)
+    def Deployment(self) -> Event:
+        return Event(EventType.Other, "Deployment")
 
     # 单奶
 
-    @singleTarget
-    def Physick(self, target: Player | None = None) -> Event:
-        return Event(
-            EventType.Heal,
-            "Physick",
-            value=int(450 * self.potency),
-            target=target,
-        )
+    def Physick(self, target: Player) -> Event:
+        return Event(EventType.Heal, "Physick", value=int(450 * self.potency))
 
-    @singleTarget
-    def Adloquium(self, target: Player | None = None) -> Event:
+    def Adloquium(self) -> Event:
         return Event(
             EventType.Heal,
             "Adloquium",
             value=int(300 * self.potency),
             effect=Shield("Galvanize", 30, int(540 * self.potency)),
-            target=target,
         )
 
-    @singleTarget
-    def Lustrate(self, target: Player | None = None) -> Event:
-        return Event(
-            EventType.Heal,
-            "Lustrate",
-            value=int(600 * self.potency),
-            target=target,
-        )
+    def Lustrate(self) -> Event:
+        return Event(EventType.Heal, "Lustrate", value=int(600 * self.potency))
 
-    @singleTarget
-    def Excogitation(self, target: Player | None = None) -> Event:
+    def Excogitation(self) -> Event:
         return Event(
             EventType.Other,
             "Excogitation",
             effect=DelayHealing("Excogitation", 45, int(800 * self.potency)),
-            target=target,
         )
 
-    @singleTarget
-    def Aetherpact(self, time: int, target: Player | None = None) -> Event:
+    def Aetherpact(self, time: int) -> Event:
         return Event(
             EventType.Heal,
             "Aetherpact",
             effect=Hot(
                 "Aetherpact", time, int(300 * self.potency * self.petCoefficient)
             ),
-            target=target,
         )
 
-    def Protraction(self, target: Player | None = None) -> Event:
-        if not target:
-            target = self
+    def Protraction(self) -> Event:
         return Event(
-            EventType.Heal,
+            EventType.Other,
             "Protraction",
-            value=int(target.maxHp * 0.1),
             effect=[
                 HealBonus("ProtractionHB", 10, 0.1),
                 IncreaseMaxHp("ProtractionIMH", 10, 0.1),
             ],
-            target=target,
         )
 
     # 群奶
@@ -183,7 +111,6 @@ class Scholar(Healer):
             ),
         )
 
-    @addUser
     def Succor(self) -> Event:
         return Event(
             EventType.Heal,
@@ -197,8 +124,8 @@ class Scholar(Healer):
             EventType.Other,
             "FeyIllumination",
             effect=[
-                MagicMitigation("FeyIlluminationMMtg", 20, 0.95),
-                HealingSpellBonus("FeyIlluminationHSB", 20, 1.1),
+                MagicMitigation("FeyIlluminationMMtg", 20, 0.05),
+                SpellBonus("FeyIlluminationHSB", 20, 0.1),
             ],
         )
 
@@ -255,108 +182,75 @@ class WhiteMage(Healer):
                 "AfflatusRapture",
             ],
         )
+        self.bellCollDown = 0
 
-    def asEventUser(self, event: Event) -> Event:
-        event = super().asEventUser(event)
-        if (
-            event.name
-            in [
-                "Medica",
-                "MedicaII",
-                "BeneficIII",
-                "AfflatusRapture",
-            ]
-            and self.__checkPI()
-        ):
+    def asEventUser(self, event: Event, target: Player) -> Event:
+        event = super().asEventUser(event, target)
+        if event.name not in [
+            "Medica",
+            "MedicaII",
+            "BeneficIII",
+            "AfflatusRapture",
+        ]:
+            return event
+        if self.__searchEffect("PlenaryIndulgence"):
             event.value += int(200 * self.potency)
         return event
-
-    def __checkPI(self) -> bool:
-        for effect in self.effectList:
-            if effect.name == "PlenaryIndulgence":
-                return True
-        return False
 
     def PlenaryIndulgence(self) -> Event:
         """全大赦"""
         return Event(
             EventType.Other,
             "PlenaryIndulgence",
-            effect=Effect("PlenaryIndulgence", 10),
-            target=self,
+            effect=Effect("PlenaryIndulgence", 10, 0),
         )
+
+    # def dealWithReayEvent(self, event: Event) -> Event | None:
+    #     super().dealWithReadyEvent(event)
+    #     if event.eventType in [EventType.Heal, EventType.Other]:
+    #         return None
+    #     if bell := self.__searchEffect("LiturgyOfTheBell"):
+    #         bell.value -= 1
+    #         self.bellCollDown = 1
+    #         if bell.value == 0:
+    #             bell.remainTime = 0
+    #         return Event(
+    #             EventType.Heal, "LiturgyOfTheBellHeal", int(400 * self.potency)
+    #         )
+    #     return None
 
     # 单奶
-    @singleTarget
-    def Cure(self, target: Player | None = None) -> Event:
+
+    def Cure(self) -> Event:
+        return Event(EventType.Heal, "Cure", value=int(500 * self.potency))
+
+    def CureII(self) -> Event:
+        return Event(EventType.Heal, "CureII", value=int(800 * self.potency))
+
+    def Regen(self) -> Event:
         return Event(
-            EventType.Heal,
-            "Cure",
-            value=int(500 * self.potency),
-            target=target,
+            EventType.Other, "Regen", effect=Hot("Regen", 18, int(250 * self.potency))
         )
 
-    @singleTarget
-    def CureII(self, target: Player | None = None) -> Event:
-        return Event(
-            EventType.Heal,
-            "CureII",
-            value=int(800 * self.potency),
-            target=target,
-        )
+    def Benediction(self) -> Event:
+        return Event(EventType.Heal, "Benediction", value=1000000)
 
-    @singleTarget
-    def Regen(self, target: Player | None = None) -> Event:
-        return Event(
-            EventType.Other,
-            "Regen",
-            effect=Hot("Regen", 18, int(250 * self.potency)),
-            target=target,
-        )
+    def AfflatusSolace(self) -> Event:
+        return Event(EventType.Heal, "AfflatusSolace", value=int(800 * self.potency))
 
-    @singleTarget
-    def Benediction(self, target: Player | None = None) -> Event:
-        return Event(
-            EventType.Heal,
-            "Benediction",
-            value=1000000,
-            target=target,
-        )
+    def Tetragrammaton(self) -> Event:
+        return Event(EventType.Heal, "Tetragrammaton", value=int(700 * self.potency))
 
-    @singleTarget
-    def AfflatusSolace(self, target: Player | None = None) -> Event:
-        return Event(
-            EventType.Heal,
-            "AfflatusSolace",
-            value=int(800 * self.potency),
-            target=target,
-        )
-
-    @singleTarget
-    def Tetragrammaton(self, target: Player | None = None) -> Event:
-        return Event(
-            EventType.Heal,
-            "Tetragrammaton",
-            value=int(700 * self.potency),
-            target=target,
-        )
-
-    @singleTarget
-    def DivineBenison(self, target: Player | None = None) -> Event:
+    def DivineBenison(self) -> Event:
         return Event(
             EventType.Other,
             "DivineBenison",
             effect=Shield("DivineBenison", 15, int(500 * self.potency)),
-            target=target,
         )
 
-    @singleTarget
-    def Aquaveil(self, target: Player | None = None) -> Event:
+    def Aquaveil(self) -> Event:
         return Event(
-            EventType.Other,
-            "Aquaveil",
-            effect=Mitigation("Aquaveil", 8, 0.15),
-            target=target,
+            EventType.Other, "Aquaveil", effect=Mitigation("Aquaveil", 8, 0.15)
         )
 
     def Medica(self) -> Event:
@@ -394,39 +288,27 @@ class WhiteMage(Healer):
 
     def Assize(self) -> Event:
         """法令"""
-        return Event(
-            EventType.Heal,
-            "Assize",
-            value=int(400 * self.potency),
-        )
+        return Event(EventType.Heal, "Assize", value=int(400 * self.potency))
 
     def Temperance(self) -> list[Event]:
         """节制"""
         return [
             Event(
-                EventType.Other,
-                "Temperance",
-                effect=[
-                    Mitigation("Temperance", 22, 0.1),
-                ],
+                EventType.Other, "Temperance", effect=Mitigation("Temperance", 22, 0.1)
             ),
             Event(
                 EventType.Other,
                 "Temperance",
-                effect=[
-                    HealingSpellBonus("TemperanceHSB", 22, 0.2),
-                ],
-                target=self,
+                effect=SpellBonus("TemperanceSB", 22, 0.2),
             ),
         ]
 
-    def LiturgyOfTheBell(self) -> Event:
-        return Event(
-            EventType.Other,
-            "LiturgyOfTheBell",
-            effect=Effect("LiturgyOfTheBell5", 20),
-            target=self,
-        )
+    # def LiturgyOfTheBell(self) -> Event:
+    #     return Event(
+    #         EventType.Other,
+    #         "LiturgyOfTheBell",
+    #         effect=Effect("LiturgyOfTheBell", 20, 5),
+    #     )
 
 
 class Astrologian(Healer):
@@ -439,8 +321,8 @@ class Astrologian(Healer):
             ["Helios", "AspectedHelios", "Benefic", "BeneficII", "AspectedBenefic"],
         )
 
-    def asEventUser(self, event: Event) -> Event:
-        event = super().asEventUser(event)
+    def asEventUser(self, event: Event, target: Player) -> Event:
+        event = super().asEventUser(event, target)
         if event.name == "AspectedHelios" and self.__checkNS():
             event.effectList.append(
                 Shield("AspectedHeliosShield", 30, int(event.value * 1.25))
@@ -458,46 +340,38 @@ class Astrologian(Healer):
         return False
 
     # 单奶
-    @singleTarget
-    def Benefic(self, target: Player | None = None) -> Event:
+
+    def Benefic(self) -> Event:
         return Event(
             EventType.Heal,
             "Benefic",
             value=int(500 * self.potency),
-            target=target,
         )
 
-    @singleTarget
-    def BeneficII(self, target: Player | None = None) -> Event:
+    def BeneficII(self) -> Event:
         return Event(
             EventType.Heal,
             "BeneficII",
             value=int(800 * self.potency),
-            target=target,
         )
 
-    @singleTarget
-    def AspectedBenefic(self, target: Player | None = None) -> Event:
+    def AspectedBenefic(self) -> Event:
         return Event(
             EventType.Heal,
             "AspectedBenefic",
             value=int(250 * self.potency),
             effect=Hot("AspectedBenefic", 15, int(250 * self.potency)),
-            target=target,
         )
 
-    @singleTarget
-    def CelestialIntersection(self, target: Player | None = None) -> Event:
+    def CelestialIntersection(self) -> Event:
         return Event(
             EventType.Heal,
             "DivineBenision",
             value=int(200 * self.potency),
             effect=Shield("CelestialIntersection", 15, int(400 * self.potency)),
-            target=target,
         )
 
-    @singleTarget
-    def Exaltation(self, target: Player | None = None) -> Event:
+    def Exaltation(self) -> Event:
         return Event(
             EventType.Other,
             "Exaltation",
@@ -505,7 +379,6 @@ class Astrologian(Healer):
                 Mitigation("Exaltation", 8, 0.1),
                 DelayHealing("ExaltationDH", 8, int(500 * self.potency)),
             ],
-            target=target,
         )
 
     # 群奶
@@ -543,4 +416,6 @@ class Astrologian(Healer):
         return Event(EventType.Heal, "EarthlyStar", value=int(720 * self.potency))
 
     def NeutralSect(self) -> Event:
-        return Event(EventType.Other, "NeutralSect", effect=Effect("NeutralSect", 20))
+        return Event(
+            EventType.Other, "NeutralSect", effect=Effect("NeutralSect", 20, 0)
+        )

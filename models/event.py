@@ -8,7 +8,7 @@ class Event:
         eventType: EventType,
         name: str,
         value: int = 0,
-        effect: list[Effect] | Effect = []
+        effect: list[Effect] | Effect = [],
     ) -> None:
         self.name: str = name
         self.eventType: EventType = eventType
@@ -19,3 +19,9 @@ class Event:
         else:
             self.effectList.append(effect)
         self.hasPrepared: bool = False
+
+    def getPercentage(self, percentage: float) -> None:
+        self.value = int(self.value * percentage)
+        for effect in self.effectList:
+            if effect.getSnapshot:
+                effect.value = int(effect.value * percentage)

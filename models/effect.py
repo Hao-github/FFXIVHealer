@@ -17,10 +17,12 @@ class Timer:
 
 
 class Effect:
-    def __init__(self, name: str, duration: int) -> None:
+    def __init__(self, name: str, duration: float, value: float) -> None:
         self.name: str = name
-        self.duration: int = duration
+        self.duration: float = duration
         self.remainTime: float = duration
+        self.getSnapshot: bool = False
+        self.value = value
 
     def update(self, timeInterval: float) -> None:
         self.remainTime -= timeInterval
@@ -35,45 +37,36 @@ class Effect:
 
 
 class Mitigation(Effect):
-    def __init__(self, name: str, duration: int, percentage: float) -> None:
-        super().__init__(name, duration)
-        self.percentage: float = percentage
+    def __init__(self, name: str, duration: float, value: float) -> None:
+        super().__init__(name, duration, value)
 
 
 class MagicMitigation(Effect):
-    def __init__(self, name: str, duration: int, percentage: float) -> None:
-        super().__init__(name, duration)
-        self.percentage: float = percentage
+    def __init__(self, name: str, duration: float, value: float) -> None:
+        super().__init__(name, duration, value)
 
 
 class Shield(Effect):
-    def __init__(self, name: str, duration: int, value: int) -> None:
-        super().__init__(name, duration)
-        self.value: int = value
+    def __init__(self, name: str, duration: float, value: int) -> None:
+        super().__init__(name, duration, value)
+        self.getSnapshot = True
 
 
 class HealBonus(Effect):
-    def __init__(self, name: str, duration: int, percentage: float) -> None:
-        super().__init__(name, duration)
-        self.percentage: float = percentage
+    def __init__(self, name: str, duration: float, value: float) -> None:
+        super().__init__(name, duration, value)
 
 
-class HealingSpellBonus(Effect):
-    def __init__(self, name: str, duration: int, percentage: float) -> None:
-        super().__init__(name, duration)
-        self.percentage: float = percentage
+class SpellBonus(Effect):
+    def __init__(self, name: str, duration: float, value: float) -> None:
+        super().__init__(name, duration, value)
 
 
 class Dot(Effect):
-    def __init__(
-        self,
-        name: str,
-        duration: int,
-        value: int,
-    ) -> None:
-        super().__init__(name, duration)
-        self.value: int = value
+    def __init__(self, name: str, duration: float, value: int) -> None:
+        super().__init__(name, duration, value)
         self.timer: Timer = Timer(random() * 3)
+        self.getSnapshot = True
 
     def update(self, timeInterval: float) -> bool:
         super().update(timeInterval)
@@ -81,10 +74,10 @@ class Dot(Effect):
 
 
 class Hot(Effect):
-    def __init__(self, name: str, duration: int, value: int) -> None:
-        super().__init__(name, duration)
-        self.value: int = value
+    def __init__(self, name: str, duration: float, value: int) -> None:
+        super().__init__(name, duration, value)
         self.timer: Timer = Timer(random() * 3)
+        self.getSnapshot = True
 
     def update(self, timeInterval: float) -> bool:
         super().update(timeInterval)
@@ -92,9 +85,9 @@ class Hot(Effect):
 
 
 class DelayHealing(Effect):
-    def __init__(self, name: str, duration: int, value: int) -> None:
-        super().__init__(name, duration)
-        self.value: int = value
+    def __init__(self, name: str, duration: float, value: int) -> None:
+        super().__init__(name, duration, value)
+        self.getSnapshot = True
 
     def update(self, timeInterval: float) -> bool:
         super().update(timeInterval)
@@ -104,9 +97,8 @@ class DelayHealing(Effect):
 
 
 class IncreaseMaxHp(Effect):
-    def __init__(self, name: str, duration: int, percentage: float) -> None:
-        super().__init__(name, duration)
-        self.percentage = percentage
+    def __init__(self, name: str, duration: float, value: float) -> None:
+        super().__init__(name, duration, value)
 
     def update(self, timeInterval: float) -> bool:
         super().update(timeInterval)

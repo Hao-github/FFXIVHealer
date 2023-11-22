@@ -2,14 +2,12 @@ from copy import deepcopy
 import pandas as pd
 from models.player import Player
 from models.event import Event
-from models.record import RecordList
+from models.record import RecordQueue
 
 
 class Fight:
     playerList: list[Player] = []
-
-    # 事件, 数值, 时间
-    recordqueue: RecordList = RecordList(0.01)
+    recordqueue: RecordQueue = RecordQueue(0.01)
     timeInterval: float = 0.01
 
     @classmethod
@@ -35,7 +33,7 @@ class Fight:
         if not cls.playerList:
             return
         # resultDf: pd.DataFrame = pd.DataFrame(columns=["事件","角色"])
-        timeSnapshot: float = 0
+        time: float = 0
         while True:
             # 如果已经没有记录要发生了
             if cls.recordqueue.empty():
@@ -43,29 +41,26 @@ class Fight:
             # 检查dot和hot判定, 如果dot和hot跳了, 就产生一个没有延迟的prepare事件
             for player in cls.playerList:
                 cls.recordqueue.put(
-                    timeSnapshot, player.update(cls.timeInterval), player, player
+                    time, player.update(cls.timeInterval), player, player
                 )
-            while cls.recordqueue.happen(timeSnapshot):
+            while cls.recordqueue.happen(time):
                 record = cls.recordqueue.get()
                 if not record:
                     return
                 # 对于prepare事件
                 if not record.event.hasPrepared:
-                    event = record.user.asEventUser(record.event)
-                    event = record.target.asEventTarget(event)
+                    event = record.user.asEventUser(record.event, record.target)
+                    event = record.target.asEventTarget(event, record.user)
                     # 经过生效延迟后重新丢入队列
                     event.hasPrepared = True
                     cls.recordqueue.put(
-                        timeSnapshot + cls.timeInterval,
-                        event,
-                        record.user,
-                        record.target,
+                        time + cls.timeInterval, event, record.user, record.target
                     )
                 # 否则直接找target来判定事件
                 else:
                     record.target.dealWithReadyEvent(record.event)
 
-            timeSnapshot += cls.timeInterval
+            time += cls.timeInterval
 
     @classmethod
     def showInfo(cls, event: Event):
