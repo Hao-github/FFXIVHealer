@@ -1,6 +1,6 @@
 from copy import deepcopy
 import pandas as pd
-from models.player import Player, totalPlayer
+from models.player import Player, allPlayer
 from models.event import Event
 from models.record import Record, RecordQueue
 
@@ -45,7 +45,7 @@ class Fight:
                 if not record.prepared:
                     record.event = record.user.asEventUser(record.event, record.target)
                     # 经过生效延迟后重新丢入队列
-                    if record.target == totalPlayer:
+                    if record.target == allPlayer:
                         for player in cls.playerList:
                             r = Record(
                                 player.asEventTarget(
@@ -64,7 +64,7 @@ class Fight:
                         cls.recordQueue.putRecord(time + cls.timeInterval, record)
                 # 否则直接找target来判定事件
                 else:
-                    if record.target == totalPlayer:
+                    if record.target == allPlayer:
                         for player in cls.playerList:
                             player.dealWithReadyEvent(deepcopy(record.event))
                     else:

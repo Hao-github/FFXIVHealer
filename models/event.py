@@ -27,3 +27,6 @@ class Event:
 
     def __str__(self) -> str:
         return self.name + ": " + str(self.value)
+
+    def append(self, effect: Effect) -> None:
+        self.effectList.append(effect)

@@ -1,15 +1,15 @@
 from __future__ import annotations
 from models.event import Event
 from .effect import (
-    DelayHealing,
+    DelayHeal,
     Dot,
     Effect,
     HealBonus,
     SpellBonus,
     Hot,
     IncreaseMaxHp,
-    MagicMitigation,
-    Mitigation,
+    MagicMtg,
+    Mtg,
     Shield,
     maxHpShield,
 )
@@ -24,10 +24,15 @@ class Player:
         self.maxHp: int = hp
         self.hp: int = hp
         self.effectList: list[Effect] = [Hot("naturalHeal", 10000, hp // 100)]
-        self.isSurvival: bool = True
         self.potency: float = potency
 
     def asEventUser(self, event: Event, target: Player) -> Event:
+        if event.eventType != EventType.Heal:
+            return event
+        event.value = int(event.value * self.potency)
+        for effect in event.effectList:
+            if effect.name != "naturalHeal" and effect.getSnapshot:
+                effect.value = int(effect.value * self.potency)
         return event
 
     def asEventTarget(self, event: Event, user: Player) -> Event:
@@ -50,8 +55,7 @@ class Player:
                     effect.value -= damage
                     return 0
                 damage -= int(effect.value)
-                effect.value = 0
-                effect.remainTime = 0
+                effect.setZero()
         return damage
 
     def getEffect(self, effect: Effect) -> None:
@@ -90,7 +94,7 @@ class Player:
         ret: list[Event] = []
         for effect in self.effectList:
             if effect.update(timeInterval):
-                if type(effect) == Hot or type(effect) == DelayHealing:
+                if type(effect) == Hot or type(effect) == DelayHeal:
                     ret.append(Event(EventType.Heal, effect.name, int(effect.value)))
                 elif type(effect) == Dot:
                     ret.append(
@@ -108,7 +112,7 @@ class Player:
         return ret
 
     def totalPercentage(self, myType: type) -> float:
-        if myType not in [Mitigation, MagicMitigation, HealBonus, SpellBonus]:
+        if myType not in [Mtg, MagicMtg, HealBonus, SpellBonus]:
             return 1
         return reduce(
             lambda x, y: x * (y.value if (type(y) == myType) else 1),  # type: ignore
@@ -119,12 +123,12 @@ class Player:
     @property
     def magicMitigation(self) -> float:
         """计算魔法减伤"""
-        return self.totalPercentage(MagicMitigation) * self.totalPercentage(Mitigation)
+        return self.totalPercentage(MagicMtg) * self.totalPercentage(Mtg)
 
     @property
     def physicsMitigation(self) -> float:
         """计算物理减伤"""
-        return self.totalPercentage(Mitigation)
+        return self.totalPercentage(Mtg)
 
     @property
     def healBonus(self) -> float:
@@ -143,4 +147,4 @@ class Player:
         return None
 
 
-totalPlayer = Player("totalPlayer", 0, 0)
+allPlayer = Player("totalPlayer", 0, 0)

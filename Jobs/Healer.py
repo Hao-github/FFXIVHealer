@@ -1,19 +1,20 @@
 from models.effect import (
-    DelayHealing,
+    DelayHeal,
     Effect,
     HealBonus,
     SpellBonus,
     Hot,
     IncreaseMaxHp,
-    MagicMitigation,
-    Mitigation,
+    MagicMtg,
+    Mtg,
     Shield,
 )
 from models.event import Event, EventType
-from models.player import Player, totalPlayer
+from models.player import Player, allPlayer
 from models.record import Record
 
 
+# TODO: 展开, 铃兰, 合图, 大宇宙, 消化, 海马, 胖海马
 class Healer(Player):
     def __init__(
         self, name: str, hp: int, potency: float, spellList: list[str]
@@ -22,28 +23,9 @@ class Healer(Player):
         self.spellList: list[str] = spellList
 
     def asEventUser(self, event: Event, target: Player) -> Event:
+        event = super().asEventUser(event, target)
         if event.name in self.spellList:
             event.getPercentage(self.spellBonus)
-        return event
-
-
-class Scholar(Healer):
-    # TODO: 展开未更新
-
-    def __init__(self, hp: int, potency: int, criticalNum: float) -> None:
-        super().__init__("Scholar", hp, potency, ["Succor", "Physicks", "Adloquium"])
-        self.petCoefficient: float = 0.95
-        self.criticalNum: float = criticalNum
-
-    def asEventUser(self, event: Event, target: Player) -> Event:
-        event = super().asEventUser(event, target)
-        if event.name not in ["Adloquium", "Succor", "Indomitability", "Excogitation"]:
-            return event
-        if effect := self._searchEffect("Recitation"):
-            effect.remainTime = 0
-            if event.name == "Adloquium":
-                event.effectList.append(Shield("Catalyze", 30, int(event.value * 1.8)))
-            event.getPercentage(self.criticalNum)
         return event
 
     def createRecord(
@@ -54,6 +36,30 @@ class Scholar(Healer):
         effect: list[Effect] | Effect = [],
     ) -> Record:
         return Record(Event(EventType.Heal, name, value, effect), self, target)
+
+
+class Scholar(Healer):
+    def __init__(self, hp: int, potency: int, criticalNum: float) -> None:
+        super().__init__("Scholar", hp, potency, ["Succor", "Physicks", "Adloquium"])
+        self.petCoefficient: float = 0.95
+        self.criticalNum: float = criticalNum
+
+    def asEventUser(self, event: Event, target: Player) -> Event:
+        if event.name not in ["Adloquium", "Succor", "Indomitability", "Excogitation"]:
+            return event
+        if effect := self._searchEffect("Recitation"):
+            effect.setZero()
+            if event.name == "Adloquium":
+                event.append(Shield("Catalyze", 30, 540))
+            event.getPercentage(self.criticalNum)
+        if effect := self._searchEffect("EmergencyTactics"):
+            if event.name in self.spellList:
+                effect.setZero()
+                for e in event.effectList:
+                    event.value += int(e.value)
+                    e.setZero()
+        event = super().asEventUser(event, target)
+        return event
 
     def Recitation(self) -> Record:
         return self.createRecord("Recitation", self, effect=Effect("Recitation", 15, 0))
@@ -66,36 +72,32 @@ class Scholar(Healer):
     def Deployment(self, target: Player) -> Record:
         return self.createRecord("Deployment", target)
 
+    def EmergencyTactics(self) -> Record:
+        return self.createRecord("EmergencyTactics", self)
+
     # 单奶
 
     def Physick(self, target: Player) -> Record:
-        return self.createRecord("Physick", target, value=int(450 * self.potency))
+        return self.createRecord("Physick", target, value=450)
 
     def Adloquium(self, target: Player) -> Record:
         return self.createRecord(
-            "Adloquium",
-            target,
-            value=int(300 * self.potency),
-            effect=Shield("Galvanize", 30, int(540 * self.potency)),
+            "Adloquium", target, value=300, effect=Shield("Galvanize", 30, 540)
         )
 
     def Lustrate(self, target: Player) -> Record:
-        return self.createRecord("Lustrate", target, value=int(600 * self.potency))
+        return self.createRecord("Lustrate", target, value=600)
 
     def Excogitation(self, target: Player) -> Record:
         return self.createRecord(
-            "Excogitation",
-            target,
-            effect=DelayHealing("Excogitation", 45, int(800 * self.potency)),
+            "Excogitation", target, effect=DelayHeal("Excogitation", 45, 800)
         )
 
     def Aetherpact(self, time: int, target: Player) -> Record:
         return self.createRecord(
             "Aetherpact",
             target,
-            effect=Hot(
-                "Aetherpact", time, int(300 * self.potency * self.petCoefficient)
-            ),
+            effect=Hot("Aetherpact", time, int(300 * self.petCoefficient)),
         )
 
     def Protraction(self, target: Player) -> Record:
@@ -113,26 +115,21 @@ class Scholar(Healer):
     def WhisperingDawn(self) -> Record:
         return self.createRecord(
             "WhisperingDawn",
-            totalPlayer,
-            effect=Hot(
-                "WhisperingDawn", 21, int(80 * self.potency * self.petCoefficient)
-            ),
+            allPlayer,
+            effect=Hot("WhisperingDawn", 21, int(80 * self.petCoefficient)),
         )
 
     def Succor(self) -> Record:
         return self.createRecord(
-            "Succor",
-            totalPlayer,
-            value=int(200 * self.potency),
-            effect=Shield("Galvanize", 30, int(320 * self.potency)),
+            "Succor", allPlayer, value=200, effect=Shield("Galvanize", 30, 320)
         )
 
     def FeyIllumination(self) -> Record:
         return self.createRecord(
             "FeyIllumination",
-            totalPlayer,
+            allPlayer,
             effect=[
-                MagicMitigation("FeyIlluminationMMtg", 20, 0.95),
+                MagicMtg("FeyIlluminationMMtg", 20, 0.95),
                 SpellBonus("FeyIlluminationHSB", 20, 1.1),
             ],
         )
@@ -140,38 +137,34 @@ class Scholar(Healer):
     def SacredSoil(self) -> Record:
         return self.createRecord(
             "SacredSoil",
-            totalPlayer,
-            value=int(100 * self.potency),
-            effect=[
-                Mitigation("SacredSoilMtg", 18, 0.9),
-                Hot("SacredSoilHB", 15, int(100 * self.potency)),
-            ],
+            allPlayer,
+            value=100,
+            effect=[Mtg("SacredSoilMtg", 17, 0.9), Hot("SacredSoilHB", 15, 100)],
         )
 
     def Indomitability(self) -> Record:
-        return self.createRecord("Indomitability", totalPlayer, int(400 * self.potency))
+        return self.createRecord("Indomitability", allPlayer, 400)
 
     def FeyBlessing(self) -> Record:
         return self.createRecord(
-            "FeyBlessing", totalPlayer, int(320 * self.petCoefficient * self.potency)
+            "FeyBlessing", allPlayer, int(320 * self.petCoefficient)
         )
 
     def Consolation(self) -> Record:
         return self.createRecord(
             "Consolation",
-            totalPlayer,
-            int(250 * self.petCoefficient * self.potency),
-            Shield("Consolation", 30, int(250 * self.petCoefficient * self.potency)),
+            allPlayer,
+            int(250 * self.petCoefficient),
+            Shield("Consolation", 30, int(250 * self.petCoefficient)),
         )
 
     def Expedient(self) -> Record:
         return self.createRecord(
-            "Expedient", totalPlayer, effect=Mitigation("Expedient", 20, 0.9)
+            "Expedient", allPlayer, effect=Mtg("Expedient", 20, 0.9)
         )
 
 
 class WhiteMage(Healer):
-    # TODO: 铃兰未添加
     def __init__(self, hp: int, potency: float) -> None:
         super().__init__(
             "WhiteMage",
@@ -191,7 +184,6 @@ class WhiteMage(Healer):
         self.bellCollDown = 0
 
     def asEventUser(self, event: Event, target: Player) -> Event:
-        event = super().asEventUser(event, target)
         if event.name not in [
             "Medica",
             "MedicaII",
@@ -200,20 +192,19 @@ class WhiteMage(Healer):
         ]:
             return event
         if self._searchEffect("PlenaryIndulgence"):
-            event.value += int(200 * self.potency)
+            event.value += 200
+        event = super().asEventUser(event, target)
         return event
 
-    def PlenaryIndulgence(self) -> Event:
+    def PlenaryIndulgence(self) -> Record:
         """全大赦"""
-        return Event(
-            EventType.Other,
-            "PlenaryIndulgence",
-            effect=Effect("PlenaryIndulgence", 10, 0),
+        return self.createRecord(
+            "PlenaryIndulgence", self, effect=Effect("PlenaryIndulgence", 10, 0)
         )
 
-    # def dealWithReayEvent(self, event: Event) -> Event | None:
+    # def dealWithReayEvent(self, event: Event) -> Record | None:
     #     super().dealWithReadyEvent(event)
-    #     if event.eventType in [EventType.Heal, EventType.Other]:
+    #     if event.eventType in [ EventType.Other]:
     #         return None
     #     if bell := self.__searchEffect("LiturgyOfTheBell"):
     #         bell.value -= 1
@@ -221,97 +212,83 @@ class WhiteMage(Healer):
     #         if bell.value == 0:
     #             bell.remainTime = 0
     #         return Event(
-    #             EventType.Heal, "LiturgyOfTheBellHeal", int(400 * self.potency)
+    #              "LiturgyOfTheBellHeal", 400 )
     #         )
     #     return None
 
     # 单奶
 
-    def Cure(self) -> Event:
-        return Event(EventType.Heal, "Cure", value=int(500 * self.potency))
+    def Cure(self, target: Player) -> Record:
+        return self.createRecord("Cure", target, value=500)
 
-    def CureII(self) -> Event:
-        return Event(EventType.Heal, "CureII", value=int(800 * self.potency))
+    def CureII(self, target: Player) -> Record:
+        return self.createRecord("CureII", target, value=800)
 
-    def Regen(self) -> Event:
-        return Event(
-            EventType.Other, "Regen", effect=Hot("Regen", 18, int(250 * self.potency))
+    def Regen(self, target: Player) -> Record:
+        return self.createRecord("Regen", target, effect=Hot("Regen", 18, 250))
+
+    def Benediction(self, target: Player) -> Record:
+        return self.createRecord("Benediction", target, value=1000000)
+
+    def AfflatusSolace(self, target: Player) -> Record:
+        return self.createRecord("AfflatusSolace", target, value=800)
+
+    def Tetragrammaton(self, target: Player) -> Record:
+        return self.createRecord("Tetragrammaton", target, value=700)
+
+    def DivineBenison(self, target: Player) -> Record:
+        return self.createRecord(
+            "DivineBenison", target, effect=Shield("DivineBenison", 15, 500)
         )
 
-    def Benediction(self) -> Event:
-        return Event(EventType.Heal, "Benediction", value=1000000)
+    def Aquaveil(self, target: Player) -> Record:
+        return self.createRecord("Aquaveil", target, effect=Mtg("Aquaveil", 8, 0.85))
 
-    def AfflatusSolace(self) -> Event:
-        return Event(EventType.Heal, "AfflatusSolace", value=int(800 * self.potency))
-
-    def Tetragrammaton(self) -> Event:
-        return Event(EventType.Heal, "Tetragrammaton", value=int(700 * self.potency))
-
-    def DivineBenison(self) -> Event:
-        return Event(
-            EventType.Other,
-            "DivineBenison",
-            effect=Shield("DivineBenison", 15, int(500 * self.potency)),
-        )
-
-    def Aquaveil(self) -> Event:
-        return Event(
-            EventType.Other, "Aquaveil", effect=Mitigation("Aquaveil", 8, 0.85)
-        )
-
-    def Medica(self) -> Event:
+    def Medica(self) -> Record:
         """医治"""
-        return Event(EventType.Heal, "Medica", value=int(400 * self.potency))
+        return self.createRecord("Medica", allPlayer, value=400)
 
-    def AfflatusRapture(self) -> Event:
+    def AfflatusRapture(self) -> Record:
         """狂喜之心"""
-        return Event(EventType.Heal, "AfflatusRapture", value=int(400 * self.potency))
+        return self.createRecord("AfflatusRapture", allPlayer, value=400)
 
-    def CureIII(self) -> Event:
+    def CureIII(self) -> Record:
         """愈疗"""
-        return Event(EventType.Heal, "CureIII", value=int(600 * self.potency))
+        return self.createRecord("CureIII", allPlayer, value=600)
 
-    def MedicaII(self) -> Event:
+    def MedicaII(self) -> Record:
         """医济"""
-        return Event(
-            EventType.Heal,
-            "MedicaII",
-            value=int(250 * self.potency),
-            effect=Hot("MedicaII", 15, int(150 * self.potency)),
+        return self.createRecord(
+            "MedicaII", allPlayer, value=250, effect=Hot("MedicaII", 15, 150)
         )
 
-    def Asylum(self) -> Event:
+    def Asylum(self) -> Record:
         """庇护所"""
-        return Event(
-            EventType.Heal,
+        return self.createRecord(
             "Asylum",
-            value=int(100 * self.potency),
-            effect=[
-                Hot("AsylumHot", 24, int(100 * self.potency)),
-                HealBonus("AsylumHB", 27, 1.1),
-            ],
+            allPlayer,
+            value=100,
+            effect=[Hot("AsylumHot", 24, 100), HealBonus("AsylumHB", 27, 1.1)],
         )
 
-    def Assize(self) -> Event:
+    def Assize(self) -> Record:
         """法令"""
-        return Event(EventType.Heal, "Assize", value=int(400 * self.potency))
+        return self.createRecord("Assize", allPlayer, value=400)
 
-    def Temperance(self) -> list[Event]:
+    def Temperance(self) -> list[Record]:
         """节制"""
         return [
-            Event(
-                EventType.Other, "Temperance", effect=Mitigation("Temperance", 22, 1.1)
+            self.createRecord(
+                "Temperance", allPlayer, effect=Mtg("TemperanceMtg", 22, 1.1)
             ),
-            Event(
-                EventType.Other,
-                "Temperance",
-                effect=SpellBonus("TemperanceSB", 22, 1.2),
+            self.createRecord(
+                "Temperance", self, effect=SpellBonus("TemperanceSB", 20, 1.2)
             ),
         ]
 
-    # def LiturgyOfTheBell(self) -> Event:
+    # def LiturgyOfTheBell(self) -> Record:
     #     return Event(
-    #         EventType.Other,
+    #
     #         "LiturgyOfTheBell",
     #         effect=Effect("LiturgyOfTheBell", 20, 5),
     #     )
@@ -328,7 +305,6 @@ class Astrologian(Healer):
         )
 
     def asEventUser(self, event: Event, target: Player) -> Event:
-        event = super().asEventUser(event, target)
         if event.name in ["AspectedHelios", "Helios"]:
             if effect := self._searchEffect("Horoscope"):
                 effect.remainTime = 30
@@ -337,99 +313,159 @@ class Astrologian(Healer):
             if effect := self._searchEffect("Horoscope"):
                 return Event(EventType.Heal, "Horoscope", int(effect.value))
         if event.name == "AspectedHelios" and self._searchEffect("NeutralSect"):
-            event.effectList.append(
-                Shield("AspectedHeliosShield", 30, int(event.value * 1.25))
-            )
+            event.append(Shield("AspectedHeliosShield", 30, int(250 * 1.25)))
         elif event.name == "AspectedBenefic" and self._searchEffect("NeutralSect"):
-            event.effectList.append(
-                Shield("AspectedBeneficShield", 30, int(event.value * 2.5))
-            )
+            event.append(Shield("AspectedBeneficShield", 30, 625))
+        event = super().asEventUser(event, target)
         return event
 
     # 单奶
 
-    def Benefic(self) -> Event:
-        return Event(EventType.Heal, "Benefic", value=int(500 * self.potency))
+    def Benefic(self, target: Player) -> Record:
+        return self.createRecord("Benefic", target, value=500)
 
-    def BeneficII(self) -> Event:
-        return Event(EventType.Heal, "BeneficII", value=int(800 * self.potency))
+    def BeneficII(self, target: Player) -> Record:
+        return self.createRecord("BeneficII", target, value=800)
 
-    def AspectedBenefic(self) -> Event:
-        return Event(
-            EventType.Heal,
-            "AspectedBenefic",
-            value=int(250 * self.potency),
-            effect=Hot("AspectedBenefic", 15, int(250 * self.potency)),
+    def AspectedBenefic(self, target: Player) -> Record:
+        return self.createRecord(
+            "AspectedBenefic", target, value=250, effect=Hot("AspectedBenefic", 15, 250)
         )
 
-    def CelestialIntersection(self) -> Event:
-        return Event(
-            EventType.Heal,
+    def CelestialIntersection(self, target: Player) -> Record:
+        return self.createRecord(
             "CelestialIntersection",
-            value=int(200 * self.potency),
-            effect=Shield("CelestialIntersection", 15, int(400 * self.potency)),
+            target,
+            value=200,
+            effect=Shield("CelestialIntersection", 15, 400),
         )
 
-    def Exaltation(self) -> Event:
-        return Event(
-            EventType.Other,
+    def Exaltation(self, target: Player) -> Record:
+        return self.createRecord(
             "Exaltation",
-            effect=[
-                Mitigation("Exaltation", 8, 0.9),
-                DelayHealing("ExaltationDH", 8, int(500 * self.potency)),
-            ],
+            target,
+            effect=[Mtg("Exaltation", 8, 0.9), DelayHeal("ExaltationDH", 8, 500)],
         )
 
     # 群奶
 
-    def Helios(self) -> Event:
-        return Event(EventType.Heal, "Helios", value=int(400 * self.potency))
+    def Helios(self) -> Record:
+        return self.createRecord("Helios", allPlayer, value=400)
 
-    def AspectedHelios(self) -> Event:
-        return Event(
-            EventType.Heal,
+    def AspectedHelios(self) -> Record:
+        return self.createRecord(
             "AspectedHelios",
-            value=int(250 * self.potency),
-            effect=Hot("AspectedHeliosHot", 15, int(150 * self.potency)),
+            allPlayer,
+            value=250,
+            effect=Hot("AspectedHelios", 15, 150),
         )
 
-    def CollectiveUnconscious(self) -> Event:
-        return Event(
-            EventType.Heal,
+    def CollectiveUnconscious(self) -> Record:
+        return self.createRecord(
             "CollectiveUnconscious",
-            effect=[
-                Mitigation("CUMtg", 5, 0.9),
-                Hot("CUHot", 15, int(100 * self.potency)),
+            allPlayer,
+            effect=[Mtg("CUMtg", 5, 0.9), Hot("CUHot", 15, 100)],
+        )
+
+    def CelestialOpposition(self) -> Record:
+        return self.createRecord(
+            "CelestialOpposition", allPlayer, value=200, effect=Hot("COHot", 15, 100)
+        )
+
+    def EarthlyStar(self) -> Record:
+        return self.createRecord("EarthlyStar", allPlayer, value=720)
+
+    def NeutralSect(self) -> Record:
+        return self.createRecord(
+            "NeutralSect", self, effect=Effect("NeutralSect", 20, 0)
+        )
+
+    def Horoscope(self) -> Record:
+        return self.createRecord(
+            "Horoscope", self, effect=DelayHeal("Horoscope", 10, 200)
+        )
+
+    def closeHoroscope(self) -> Record:
+        return self.createRecord("closeHoroscope", self)
+
+
+class Sage(Healer):
+    def __init__(self, hp: int, potency: float) -> None:
+        super().__init__(
+            "Sage",
+            hp,
+            potency,
+            [
+                "Dignosis",
+                "Prognosis",
+                "EkurasianDignosis",
+                "EkurasianPrognosis",
+                "Pneuma",
             ],
         )
 
-    def CelestialOpposition(self) -> Event:
-        return Event(
-            EventType.Heal,
-            "CelestialOpposition",
-            value=int(200 * self.potency),
-            effect=Hot("COHot", 15, int(100 * self.potency)),
+    def Dignosis(self, target: Player) -> Record:
+        return self.createRecord("Dignosis", target, value=450)
+
+    def Prognosis(self) -> Record:
+        return self.createRecord("Prognosis", allPlayer, value=300)
+
+    def PhysisII(self) -> Record:
+        return self.createRecord(
+            "PhysisII",
+            allPlayer,
+            effect=[
+                Hot("PhysisIIHot", 15, 130),
+            ],
         )
 
-    def EarthlyStar(self) -> Event:
-        return Event(EventType.Heal, "EarthlyStar", value=int(720 * self.potency))
-
-    def NeutralSect(self) -> Event:
-        return Event(
-            EventType.Other, "NeutralSect", effect=Effect("NeutralSect", 20, 0)
+    def EkurasianDignosis(self, target: Player) -> Record:
+        return self.createRecord(
+            "EkurasianDignosis",
+            target,
+            value=300,
+            effect=Shield("EkurasianDignosis", 30, 540),
         )
 
-    def Horoscope(self) -> Event:
-        return Event(
-            EventType.Other,
-            "Horoscope",
-            effect=DelayHealing("Horoscope", 10, int(200 * self.potency)),
+    def EkurasianPrognosis(self) -> Record:
+        return self.createRecord(
+            "EkurasianPrognosis",
+            allPlayer,
+            value=100,
+            effect=Shield("EkurasianDignosis", 30, 320),
         )
 
-    def closeHoroscope(self) -> Event:
-        return Event(EventType.Other, "closeHoroscope")
+    def Druochole(self, target: Player) -> Record:
+        return self.createRecord("Druochole", target, value=600)
 
+    def Kerachole(self) -> Record:
+        return self.createRecord(
+            "Kerachole",
+            allPlayer,
+            effect=[Mtg("KeracholeMtg", 15, 0.9), Hot("KeracholeHB", 15, 100)],
+        )
 
-# class Sage(Healer):
-#     def __init__(self, name: str, hp: int, potency: float, spellList: list[str]) -> None:
-#         super().__init__("Sage", hp, potency, spellList)
+    def Ixochole(self) -> Record:
+        return self.createRecord("Ixochole", allPlayer, value=400)
+
+    def Zoe(self) -> Record:
+        return self.createRecord("Zoe", self, effect=Effect("Zoe", 30, 0))
+
+    def Taurochole(self, target: Player) -> Record:
+        return self.createRecord(
+            "Taurochole", target, value=700, effect=Mtg("KeracholeMtg", 15, 0.9)
+        )
+
+    def Holos(self) -> Record:
+        return self.createRecord(
+            "Holos",
+            allPlayer,
+            value=300,
+            effect=[Mtg("HolosMtg", 20, 0.9), Shield("HolosShield", 30, 300)],
+        )
+
+    def Krasis(self, target: Player) -> Record:
+        return self.createRecord("Krasis", target, effect=HealBonus("Krasis", 10, 1.2))
+
+    def Pneuma(self) -> Record:
+        return self.createRecord("Pneuma", allPlayer, value=600)

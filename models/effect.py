@@ -36,13 +36,19 @@ class Effect:
             return False
         return type(self) == type(__value) and self.name == __value.name
 
+    def setZero(self) -> None:
+        self.remainTime = 0
+        self.value = 0
 
-class Mitigation(Effect):
+
+class Mtg(Effect):
+    """Mitigation 减伤"""
+
     def __init__(self, name: str, duration: float, value: float) -> None:
         super().__init__(name, duration, value)
 
 
-class MagicMitigation(Effect):
+class MagicMtg(Effect):
     def __init__(self, name: str, duration: float, value: float) -> None:
         super().__init__(name, duration, value)
 
@@ -92,16 +98,14 @@ class Hot(Effect):
         return self.timer.update(timeInterval)
 
 
-class DelayHealing(Effect):
+class DelayHeal(Effect):
     def __init__(self, name: str, duration: float, value: int) -> None:
         super().__init__(name, duration, value)
         self.getSnapshot = True
 
     def update(self, timeInterval: float) -> bool:
         super().update(timeInterval)
-        if self.remainTime > 0:
-            return False
-        return True
+        return self.remainTime <= 0
 
 
 class IncreaseMaxHp(Effect):
@@ -110,6 +114,4 @@ class IncreaseMaxHp(Effect):
 
     def update(self, timeInterval: float) -> bool:
         super().update(timeInterval)
-        if self.remainTime > 0:
-            return False
-        return True
+        return self.remainTime <= 0

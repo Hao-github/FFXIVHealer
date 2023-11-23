@@ -1,89 +1,89 @@
 from models.effect import (
-    DelayHealing,
+    DelayHeal,
+    Effect,
     HealBonus,
     IncreaseMaxHp,
-    MagicMitigation,
-    Mitigation,
+    MagicMtg,
+    Mtg,
     Shield,
     Hot,
     maxHpShield,
 )
 from models.event import Event, EventType
-from models.player import Player
+from models.player import Player, allPlayer
+from models.record import Record
 
 
 class Tank(Player):
     def __init__(self, name: str, hp: int, potency: float) -> None:
         super().__init__(name, hp, potency)
 
-    def Reprisal(self) -> Event:
-        return Event(
-            EventType.Other, "Reprisal", effect=Mitigation("Reprisal", 10, 0.9)
-        )
+    def createRecord(
+        self,
+        name: str,
+        target: Player,
+        value: int = 0,
+        effect: list[Effect] | Effect = [],
+    ) -> Record:
+        return Record(Event(EventType.Heal, name, value, effect), self, target)
 
-    def Vengeance(self) -> Event:
-        return Event(
-            EventType.Other, "Vengeance", effect=Mitigation("Vengeance", 15, 0.7)
-        )
+    def Reprisal(self) -> Record:
+        return self.createRecord("Reprisal", self, effect=Mtg("Reprisal", 10, 0.9))
 
-    def Rampart(self) -> Event:
-        return Event(EventType.Other, "Rampart", effect=Mitigation("Rampart", 20, 0.8))
+    def Vengeance(self) -> Record:
+        return self.createRecord("Vengeance", self, effect=Mtg("Vengeance", 15, 0.7))
+
+    def Rampart(self) -> Record:
+        return self.createRecord("Rampart", self, effect=Mtg("Rampart", 20, 0.8))
 
 
 class Paladin(Tank):
     def __init__(self, hp: int, potency: float) -> None:
         super().__init__("Paladin", hp, potency)
 
-    def asEventUser(self, event: Event) -> Event:
+    def asEventUser(self, event: Event, target: Player) -> Event:
+        super().asEventUser(event, target)
         if event.name == "Intervention":
-            event.effectList.append(
-                Mitigation("Intervention", 8, 0.2 if self.__checkDefense() else 0.1)
-            )
+            event.append(Mtg("Intervention", 8, 0.8 if self.__check() else 0.9))
         return event
 
-    def __checkDefense(self) -> bool:
+    def __check(self) -> bool:
         if self._searchEffect("Rampart") or self._searchEffect("Vengeance"):
             return True
         return False
 
-    def DivineVeil(self) -> Event:
-        return Event(
-            EventType.Heal,
+    def DivineVeil(self) -> Record:
+        return self.createRecord(
             "DivineVeil",
-            int(400 * self.potency),
+            allPlayer,
+            400,
             effect=Shield("DivineVeil", 30, self.maxHp // 10),
         )
 
-    def PassageOfArms(self) -> Event:
-        return Event(
-            EventType.Other,
-            "PassageOfArms",
-            effect=Mitigation("PassageOfArms", 5, 0.15),
+    def PassageOfArms(self) -> Record:
+        return self.createRecord(
+            "PassageOfArms", allPlayer, effect=Mtg("PassageOfArms", 5, 0.85)
         )
 
-    def Bulwark(self) -> Event:
-        return Event(EventType.Other, "Bulwark", effect=Mitigation("Bulwark", 10, 0.2))
+    def Bulwark(self) -> Record:
+        return self.createRecord("Bulwark", self, effect=Mtg("Bulwark", 10, 0.8))
 
-    def HolySheltron(self) -> Event:
-        return Event(
-            EventType.Other,
+    def HolySheltron(self) -> Record:
+        return self.createRecord(
             "HolySheltron",
+            self,
             effect=[
-                Mitigation("HolySheltron", 8, 0.15),
-                Mitigation("Knight'sResolve", 4, 0.15),
-                Hot("Knight'sResolve", 12, int(250 * self.potency)),
+                Mtg("HolySheltron", 8, 0.85),
+                Mtg("Knight'sResolve", 4, 0.85),
+                Hot("Knight'sResolve", 12, 250),
             ],
         )
 
-    def Intervention(self) -> Event:
-        return Event(
-            EventType.Other,
+    def Intervention(self, target: Player) -> Record:
+        return self.createRecord(
             "Intervention",
-            effect=[
-                # Mitigation("Intervention", 8, 0.1),
-                Mitigation("Knight'sResolve", 4, 0.1),
-                Hot("Knight'sResolve", 12, int(250 * self.potency)),
-            ],
+            target,
+            effect=[Mtg("Knight'sResolve", 4, 0.9), Hot("Knight'sResolve", 12, 250)],
         )
 
 
@@ -91,11 +91,10 @@ class Warrior(Tank):
     def __init__(self, hp: int, potency: float) -> None:
         super().__init__("Warrior", hp, potency)
 
-    def updateEvent(self, event: Event) -> Event:
+    def asEventUser(self, event: Event, target: Player) -> Event:
+        super().asEventUser(event, target)
         if event.name == "ShakeItOff":
-            event.effectList.append(
-                maxHpShield("ShakeItOffShield", 30, self.__checkDefense())
-            )
+            event.append(maxHpShield("ShakeItOffShield", 30, self.__checkDefense()))
         return event
 
     def __checkDefense(self) -> int:
@@ -106,59 +105,49 @@ class Warrior(Tank):
                 origin += 2
         return origin
 
-    def ShakeItOff(self) -> Event:
-        return Event(
-            EventType.Heal,
-            "ShakeItOff",
-            value=int(300 * self.potency),
-            effect=Hot("ShakeItOffHot", 15, int(100 * self.potency)),
+    def ShakeItOff(self) -> Record:
+        return self.createRecord(
+            "ShakeItOff", allPlayer, value=300, effect=Hot("ShakeItOffHot", 15, 100)
         )
 
-    def Bloodwhetting(self) -> Event:
-        return Event(
-            EventType.Other,
+    def Bloodwhetting(self) -> Record:
+        return self.createRecord(
             "Bloodwhetting",
+            self,
             effect=[
-                Mitigation("Bloodwhetting", 8, 0.1),
-                Mitigation("StemTheFlow", 4, 0.1),
-                Hot("BloodwhettingHot", 9, int(400 * self.potency)),
-                Shield("StemTheTide", 20, int(400 * self.potency)),
+                Mtg("Bloodwhetting", 8, 0.9),
+                Mtg("StemTheFlow", 4, 0.9),
+                Hot("BloodwhettingHot", 9, 400),
+                Shield("StemTheTide", 20, 400),
             ],
         )
 
-    def NascentFlash(self) -> list[Event]:
+    def NascentFlash(self, target: Player) -> list[Record]:
         return [
-            Event(
-                EventType.Other,
-                "NascentFlash",
-                effect=Hot("NascentFlashHot", 9, int(400 * self.potency)),
+            self.createRecord(
+                "NascentFlash", self, effect=Hot("NascentFlashHot", 9, 400)
             ),
-            Event(
-                EventType.Other,
+            self.createRecord(
                 "NascentFlash",
+                target,
                 effect=[
-                    Mitigation("NascentFlash", 8, 0.9),
-                    Mitigation("StemTheFlow", 4, 0.9),
-                    Hot(
-                        "NascentFlashHot", 7.5, int(400 * self.potency), timeInterval=3
-                    ),
-                    Shield("StemTheTide", 20, int(400 * self.potency)),
+                    Mtg("NascentFlash", 8, 0.9),
+                    Mtg("StemTheFlow", 4, 0.9),
+                    Hot("NascentFlashHot", 7.5, 400, timeInterval=3),
+                    Shield("StemTheTide", 20, 400),
                 ],
             ),
         ]
 
-    def Equilibrium(self) -> Event:
-        return Event(
-            EventType.Heal,
-            "Equilibrium",
-            value=int(1200 * self.potency),
-            effect=Hot("Equilibrium", 15, int(200 * self.potency)),
+    def Equilibrium(self) -> Record:
+        return self.createRecord(
+            "Equilibrium", self, value=1200, effect=Hot("Equilibrium", 15, 200)
         )
 
-    def TrillOfBattle(self) -> Event:
-        return Event(
-            EventType.Other,
+    def TrillOfBattle(self) -> Record:
+        return self.createRecord(
             "TrillOfBattle",
+            self,
             effect=[
                 HealBonus("TrillOfBattleHB", 10, 1.2),
                 IncreaseMaxHp("TrillOfBattleIMH", 10, 1.2),
@@ -171,38 +160,30 @@ class GunBreaker(Tank):
         super().__init__("GunBreaker", hp, potency)
 
     def asEventUser(self, event: Event, target: Player) -> Event:
-        event = super().asEventUser(event, target)
         if target != self:
-            event.effectList.append(Shield("Brutal", 30, int(200 * self.potency)))
+            event.append(Shield("Brutal", 30, 200))
+        event = super().asEventUser(event, target)
         return event
 
-    def HeartOfLight(self) -> Event:
-        return Event(
-            EventType.Other,
-            "HeartOfLight",
-            effect=MagicMitigation("HeartOfLight", 15, 0.9),
+    def HeartOfLight(self) -> Record:
+        return self.createRecord(
+            "HeartOfLight", allPlayer, effect=MagicMtg("HeartOfLight", 15, 0.9)
         )
 
-    def Aurora(self) -> Event:
-        return Event(
-            EventType.Other, "Aurora", effect=Hot("Aurora", 18, int(200 * self.potency))
-        )
+    def Aurora(self, target: Player) -> Record:
+        return self.createRecord("Aurora", target, effect=Hot("Aurora", 18, 200))
 
-    def Camouflage(self) -> Event:
-        return Event(
-            EventType.Other,
-            "Camouflage",
-            effect=Mitigation("Camouflage", 20, 0.9),
-        )
+    def Camouflage(self) -> Record:
+        return self.createRecord("Camouflage", self, effect=Mtg("Camouflage", 20, 0.9))
 
-    def HeartOfCorundum(self) -> Event:
-        return Event(
-            EventType.Other,
+    def HeartOfCorundum(self, target: Player) -> Record:
+        return self.createRecord(
             "HeartOfCorundum",
+            target,
             effect=[
-                Mitigation("HeartOfCorundum", 8, 0.85),
-                Mitigation("ClarityOfCorundum", 4, 0.85),
-                DelayHealing("CatharsisOfCorundum", 20, int(900 * self.potency)),
+                Mtg("HeartOfCorundum", 8, 0.85),
+                Mtg("ClarityOfCorundum", 4, 0.85),
+                DelayHeal("CatharsisOfCorundum", 20, 900),
             ],
         )
 
@@ -211,30 +192,18 @@ class DarkKnight(Tank):
     def __init__(self, hp: int, potency: float) -> None:
         super().__init__("DarkKnight", hp, potency)
 
-    def DarkMissionary(self) -> Event:
-        return Event(
-            EventType.Other,
-            "DarkMissionary",
-            effect=MagicMitigation("DarkMissionary", 15, 0.9),
+    def DarkMissionary(self) -> Record:
+        return self.createRecord(
+            "DarkMissionary", self, effect=MagicMtg("DarkMissionary", 15, 0.9)
         )
 
-    def DarkMind(self) -> Event:
-        return Event(
-            EventType.Other,
-            "DarkMind",
-            effect=MagicMitigation("DarkMind", 10, 0.8),
+    def DarkMind(self) -> Record:
+        return self.createRecord("DarkMind", self, effect=MagicMtg("DarkMind", 10, 0.8))
+
+    def TheBlackestKnight(self, target: Player) -> Record:
+        return self.createRecord(
+            "TheBlackestKnight", target, effect=maxHpShield("TheBlackestKnight", 7, 25)
         )
 
-    def TheBlackestKnight(self) -> Event:
-        return Event(
-            EventType.Other,
-            "TheBlackestKnight",
-            effect=maxHpShield("TheBlackestKnight", 7, 25),
-        )
-
-    def Oblation(self) -> Event:
-        return Event(
-            EventType.Other,
-            "Oblation",
-            effect=MagicMitigation("Oblation", 10, 0.9),
-        )
+    def Oblation(self, target: Player) -> Record:
+        return self.createRecord("Oblation", target, effect=Mtg("Oblation", 10, 0.9))
