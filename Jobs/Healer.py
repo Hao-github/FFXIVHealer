@@ -62,7 +62,7 @@ class Scholar(Healer):
         return event
 
     def Recitation(self) -> Record:
-        return self.createRecord("Recitation", self, effect=Effect("Recitation", 15, 0))
+        return self.createRecord("Recitation", self, effect=Effect("Recitation", 15))
 
     def Dissipation(self) -> Record:
         return self.createRecord(
@@ -199,7 +199,7 @@ class WhiteMage(Healer):
     def PlenaryIndulgence(self) -> Record:
         """全大赦"""
         return self.createRecord(
-            "PlenaryIndulgence", self, effect=Effect("PlenaryIndulgence", 10, 0)
+            "PlenaryIndulgence", self, effect=Effect("PlenaryIndulgence", 10)
         )
 
     # def dealWithReayEvent(self, event: Event) -> Record | None:
@@ -376,9 +376,7 @@ class Astrologian(Healer):
         return self.createRecord("EarthlyStar", allPlayer, value=720)
 
     def NeutralSect(self) -> Record:
-        return self.createRecord(
-            "NeutralSect", self, effect=Effect("NeutralSect", 20, 0)
-        )
+        return self.createRecord("NeutralSect", self, effect=Effect("NeutralSect", 20))
 
     def Horoscope(self) -> Record:
         return self.createRecord(
@@ -404,6 +402,15 @@ class Sage(Healer):
             ],
         )
 
+    def asEventUser(self, event: Event, target: Player) -> Event:
+        if event.name not in self.spellList:
+            return event
+        if e := self._searchEffect("Zoe"):
+            e.setZero()
+            event.getPercentage(1.5)
+        event = super().asEventUser(event, target)
+        return event
+
     def Dignosis(self, target: Player) -> Record:
         return self.createRecord("Dignosis", target, value=450)
 
@@ -412,11 +419,7 @@ class Sage(Healer):
 
     def PhysisII(self) -> Record:
         return self.createRecord(
-            "PhysisII",
-            allPlayer,
-            effect=[
-                Hot("PhysisIIHot", 15, 130),
-            ],
+            "PhysisII", allPlayer, effect=Hot("PhysisIIHot", 15, 130)
         )
 
     def EkurasianDignosis(self, target: Player) -> Record:
@@ -449,7 +452,7 @@ class Sage(Healer):
         return self.createRecord("Ixochole", allPlayer, value=400)
 
     def Zoe(self) -> Record:
-        return self.createRecord("Zoe", self, effect=Effect("Zoe", 30, 0))
+        return self.createRecord("Zoe", self, effect=Effect("Zoe", 30))
 
     def Taurochole(self, target: Player) -> Record:
         return self.createRecord(

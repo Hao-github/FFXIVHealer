@@ -18,7 +18,7 @@ class Timer:
 
 
 class Effect:
-    def __init__(self, name: str, duration: float, value: float) -> None:
+    def __init__(self, name: str, duration: float, value: float = 0) -> None:
         self.name: str = name
         self.duration: float = duration
         self.remainTime: float = duration
