@@ -18,6 +18,7 @@ class Event:
             self.effectList.extend(effect)
         else:
             self.append(effect)
+        self.prepared: bool = False
 
     def getPercentage(self, percentage: float) -> None:
         self.value = int(self.value * percentage)

@@ -13,7 +13,6 @@ class Record:
         self.user: Player = user
         self.target: Player = target
         self.event: Event = event
-        self.prepared: bool = False
 
 
 class RecordQueue:

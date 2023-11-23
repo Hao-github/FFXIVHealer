@@ -27,7 +27,7 @@ class Fight:
         if not cls.playerList:
             return
         # resultDf: pd.DataFrame = pd.DataFrame(columns=["事件","角色"])
-        time: float = 0
+        time: float = -cls.timeInterval
         while True:
             # 如果已经没有记录要发生了
             if cls.recordQueue.empty():
@@ -38,40 +38,34 @@ class Fight:
                     time, player.update(cls.timeInterval), player, player
                 )
             while cls.recordQueue.happen(time):
+                time += cls.timeInterval
                 record = cls.recordQueue.get()
                 if not record:
                     return
-                # 对于prepare事件
-                if not record.prepared:
-                    record.event = record.user.asEventUser(record.event, record.target)
-                    # 经过生效延迟后重新丢入队列
-                    if record.target == allPlayer:
-                        for player in cls.playerList:
-                            r = Record(
-                                player.asEventTarget(
-                                    deepcopy(record.event), record.user
-                                ),
-                                record.user,
-                                player,
-                            )
-                            r.prepared = True
-                            cls.recordQueue.putRecord(time + cls.timeInterval, r)
-                    else:
-                        record.prepared = True
-                        record.event = record.target.asEventTarget(
-                            record.event, record.user
-                        )
-                        cls.recordQueue.putRecord(time + cls.timeInterval, record)
-                # 否则直接找target来判定事件
-                else:
-                    if record.target == allPlayer:
-                        for player in cls.playerList:
-                            player.dealWithReadyEvent(deepcopy(record.event))
-                    else:
-                        record.target.dealWithReadyEvent(record.event)
+                # 对于已经prepare的事件直接找target判定
+                if record.event.prepared:
+                    record.target.dealWithReadyEvent(record.event)
                     cls.showInfo(record.event)
-
-            time += cls.timeInterval
+                    continue
+                record.event.prepared = True
+                record.event = record.user.asEventUser(record.event, record.target)
+                # 否则经过生效延迟后重新丢入队列
+                # 如果目标不是全体成员
+                if record.target != allPlayer:
+                    record.event = record.target.asEventTarget(
+                        record.event, record.user
+                    )
+                    cls.recordQueue.putRecord(time + cls.timeInterval, record)
+                    continue
+                for player in cls.playerList:
+                    cls.recordQueue.putRecord(
+                        time + cls.timeInterval,
+                        Record(
+                            player.asEventTarget(deepcopy(record.event), record.user),
+                            record.user,
+                            player,
+                        ),
+                    )
 
     @classmethod
     def showInfo(cls, event: Event):
