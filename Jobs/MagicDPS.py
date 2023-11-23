@@ -17,8 +17,8 @@ class MagicDPS(Player):
     ) -> Record:
         return Record(Event(EventType.Heal, name, value, effect), self, target)
 
-    def Addle(self) -> Event:
-        return Event(EventType.Other, "Addle", effect=Mtg("Addle", 10, 0.9))
+    def Addle(self) -> Record:
+        return self.createRecord("Addle", allPlayer, effect=Mtg("Addle", 10, 0.9))
 
 
 class RedMage(MagicDPS):

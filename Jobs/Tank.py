@@ -160,7 +160,7 @@ class GunBreaker(Tank):
         super().__init__("GunBreaker", hp, potency)
 
     def asEventUser(self, event: Event, target: Player) -> Event:
-        if target != self:
+        if event.name == "HeartOfCorundum" and target != self:
             event.append(Shield("Brutal", 30, 200))
         event = super().asEventUser(event, target)
         return event
@@ -200,9 +200,9 @@ class DarkKnight(Tank):
     def DarkMind(self) -> Record:
         return self.createRecord("DarkMind", self, effect=MagicMtg("DarkMind", 10, 0.8))
 
-    def TheBlackestKnight(self, target: Player) -> Record:
+    def TheBlackestNight(self, target: Player) -> Record:
         return self.createRecord(
-            "TheBlackestKnight", target, effect=maxHpShield("TheBlackestKnight", 7, 25)
+            "TheBlackestNight", target, effect=maxHpShield("TheBlackestNight", 7, 25)
         )
 
     def Oblation(self, target: Player) -> Record:
