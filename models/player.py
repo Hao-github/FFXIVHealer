@@ -1,5 +1,5 @@
 from __future__ import annotations
-from models.event import Event
+from models.event import Event, EventType
 from .effect import (
     DelayHeal,
     Dot,
@@ -13,40 +13,36 @@ from .effect import (
     Shield,
     maxHpShield,
 )
-from .basicEnum import EventType
 from functools import reduce
 
 
 class Player:
     def __init__(self, name: str, hp: int, potency: float) -> None:
         self.name: str = name
-        self.originalMaxHp: int = hp
         self.maxHp: int = hp
         self.hp: int = hp
         self.effectList: list[Effect] = [Hot("naturalHeal", 10000, hp // 100)]
         self.potency: float = potency
 
-    def asEventUser(self, event: Event, target: Player) -> Event:
-        if event.eventType != EventType.Heal:
-            return event
-        event.value = int(event.value * self.potency)
+    def asEventUser(self, event: Event, target: Player) -> tuple[Event, Player]:
+        if event.name == "naturalHeal" or event.eventType != EventType.Heal:
+            return event, target
+        event.value = event.value * self.potency
         for effect in event.effectList:
-            if effect.name != "naturalHeal" and effect.getSnapshot:
-                effect.value = int(effect.value * self.potency)
-        return event
+            if effect.getSnapshot:
+                effect.value = effect.value * self.potency
+        return event, target
 
-    def asEventTarget(self, event: Event, user: Player) -> Event:
+    def asEventTarget(self, event: Event, user: Player) -> tuple[Event, Player]:
         if event.eventType == EventType.Heal:
             event.getPercentage(self.healBonus)
-            return event
-        elif event.eventType == EventType.Other:
-            return event
+            return event, user
         elif event.eventType == EventType.MagicDamage:
             event.getPercentage(self.magicMitigation)
         elif event.eventType == EventType.PhysicsDamage:
             event.getPercentage(self.physicsMitigation)
-        event.value = self.calDamageAfterShield(event.value)
-        return event
+        event.value = self.calDamageAfterShield(int(event.value))
+        return event, user
 
     def calDamageAfterShield(self, damage: int) -> int:
         for effect in self.effectList:
@@ -67,12 +63,12 @@ class Player:
                 effect.name, effect.duration, int(self.maxHp * effect.value / 100)
             )
         elif type(effect) == IncreaseMaxHp:
-            increaseNum = int(self.maxHp * effect.value)
-            self.maxHp += increaseNum
-            self.hp += increaseNum
+            effect.value = int(self.maxHp * effect.value)
+            self.maxHp += effect.value
+            self.hp += effect.value
 
         # 如果状态列表里已经有盾且新盾小于旧盾值,则不刷新
-        if oldEffect := self._searchEffect(effect.name):
+        if oldEffect := self.searchEffect(effect.name):
             if (
                 type(effect) == Shield
                 and type(oldEffect) == Shield
@@ -84,31 +80,27 @@ class Player:
 
     def dealWithReadyEvent(self, event: Event) -> None:
         if event.eventType == EventType.Heal:
-            self.hp = min(self.maxHp, self.hp + event.value)
-        elif event.eventType != EventType.Other:
-            self.hp -= event.value
+            self.hp = min(self.maxHp, self.hp + int(event.value))
+        else:
+            self.hp -= int(event.value)
         for effect in event.effectList:
             self.getEffect(effect)
 
     def update(self, timeInterval: float) -> list[Event]:
         ret: list[Event] = []
-        for effect in self.effectList:
-            if effect.update(timeInterval):
-                if type(effect) == Hot or type(effect) == DelayHeal:
-                    ret.append(Event(EventType.Heal, effect.name, int(effect.value)))
-                elif type(effect) == Dot:
-                    ret.append(
-                        Event(EventType.TrueDamage, effect.name, int(effect.value))
-                    )
-                elif type(effect) == IncreaseMaxHp:
+        for e in self.effectList:
+            if e.update(timeInterval):
+                if type(e) == Hot or type(e) == DelayHeal:
+                    ret.append(Event(EventType.Heal, e.name, e.value))
+                elif type(e) == Dot:
+                    ret.append(Event(EventType.TrueDamage, e.name, e.value))
+                elif type(e) == IncreaseMaxHp:
                     # 增加生命值上限的技能到时间了, 减少对应的上限
-                    self.maxHp = int(self.maxHp / (1 + effect.value))
-                    if self.maxHp < self.originalMaxHp + 10:  # 防止误差
-                        self.maxHp = self.originalMaxHp
+                    self.maxHp = self.maxHp - int(e.value)
                     self.hp = max(self.maxHp, self.hp)
 
         # 删除到时的buff
-        self.effectList = list(filter(lambda x: x.remainTime > 0, self.effectList))
+        self.effectList = [x for x in self.effectList if x.remainTime > 0]
         return ret
 
     def totalPercentage(self, myType: type) -> float:
@@ -140,9 +132,11 @@ class Player:
         """计算治疗魔法增益"""
         return self.totalPercentage(SpellBonus)
 
-    def _searchEffect(self, name: str) -> Effect | None:
+    def searchEffect(self, name: str, remove: bool = False) -> Effect | None:
         for effect in self.effectList:
             if effect.name == name:
+                if remove:
+                    effect.setZero()
                 return effect
         return None
 

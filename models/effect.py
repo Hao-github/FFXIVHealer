@@ -54,7 +54,7 @@ class MagicMtg(Effect):
 
 
 class Shield(Effect):
-    def __init__(self, name: str, duration: float, value: int) -> None:
+    def __init__(self, name: str, duration: float, value: float) -> None:
         super().__init__(name, duration, value)
         self.getSnapshot = True
 
@@ -75,7 +75,7 @@ class SpellBonus(Effect):
 
 
 class Dot(Effect):
-    def __init__(self, name: str, duration: float, value: int) -> None:
+    def __init__(self, name: str, duration: float, value: float) -> None:
         super().__init__(name, duration, value)
         self.timer: Timer = Timer(3)
         self.getSnapshot = True
@@ -87,10 +87,10 @@ class Dot(Effect):
 
 class Hot(Effect):
     def __init__(
-        self, name: str, duration: float, value: int, timeInterval: float = 3
+        self, name: str, duration: float, value: float, interval: float = 3
     ) -> None:
         super().__init__(name, duration, value)
-        self.timer: Timer = Timer(timeInterval)
+        self.timer: Timer = Timer(interval)
         self.getSnapshot = True
 
     def update(self, timeInterval: float) -> bool:
@@ -99,7 +99,9 @@ class Hot(Effect):
 
 
 class DelayHeal(Effect):
-    def __init__(self, name: str, duration: float, value: int) -> None:
+    """Delay Heal, 指延迟治疗"""
+
+    def __init__(self, name: str, duration: float, value: float) -> None:
         super().__init__(name, duration, value)
         self.getSnapshot = True
 

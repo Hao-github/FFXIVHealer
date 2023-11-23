@@ -1,7 +1,8 @@
+import traceback
 from models.effect import Effect, Mtg, HealBonus, Hot, maxHpShield
 from models.player import Player, allPlayer
-from models.event import Event, EventType
 from models.record import Record
+from models.event import Event, EventType
 
 
 class PhysicDPS(Player):
@@ -10,17 +11,17 @@ class PhysicDPS(Player):
 
     def createRecord(
         self,
-        name: str,
         target: Player,
         value: int = 0,
         effect: list[Effect] | Effect = [],
     ) -> Record:
-        return Record(Event(EventType.Heal, name, value, effect), self, target)
-
-    def Tactician(self) -> Record:
-        return self.createRecord(
-            "Tactician", allPlayer, effect=Mtg("Tactician", 15, 0.9)
+        return Record(
+            Event(EventType.Heal, traceback.extract_stack()[-2][2], value, effect),
+            self,
+            target,
         )
+    def Tactician(self) -> Record:
+        return self.createRecord(allPlayer, effect=Mtg("Tactician", 15, 0.9))
 
 
 class Bard(PhysicDPS):
@@ -28,11 +29,7 @@ class Bard(PhysicDPS):
         super().__init__("Bard", hp, potency)
 
     def NaturesMinne(self) -> Record:
-        return self.createRecord(
-            "NaturesMinne",
-            allPlayer,
-            effect=HealBonus("NaturesMinne", 15, 1.15),
-        )
+        return self.createRecord(allPlayer, effect=HealBonus("NaturesMinne", 15, 1.15))
 
 
 class Dancer(PhysicDPS):
@@ -42,7 +39,6 @@ class Dancer(PhysicDPS):
     def Improvisation(self, stack: int = 0) -> Record:
         stackList = [5, 6, 7, 8, 10]
         return self.createRecord(
-            "Improvisation",
             allPlayer,
             effect=[
                 maxHpShield("ImprovisationShield", 30, stackList[stack]),
@@ -51,7 +47,7 @@ class Dancer(PhysicDPS):
         )
 
     def CuringWaltz(self) -> Record:
-        return self.createRecord("CuringWaltz", allPlayer, value=300)
+        return self.createRecord(allPlayer, value=300)
 
 
 class Machinist(PhysicDPS):
@@ -59,6 +55,4 @@ class Machinist(PhysicDPS):
         super().__init__("Machinist", hp, potency)
 
     def Dismantle(self) -> Record:
-        return self.createRecord(
-            "Dismantle", allPlayer, effect=Mtg("Dismantle", 10, 0.9)
-        )
+        return self.createRecord(allPlayer, effect=Mtg("Dismantle", 10, 0.9))
