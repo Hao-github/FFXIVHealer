@@ -1,15 +1,12 @@
 from __future__ import annotations
+from .baseEffect import Effect
 from models.event import Event, EventType
 from .effect import (
-    DelayHeal,
-    Dot,
-    Effect,
-    HaimaShield,
     HealBonus,
     Hot,
     IncreaseMaxHp,
     MagicMtg,
-    Mtg,
+    PhysicsMtg,
     Shield,
     maxHpShield,
 )
@@ -21,13 +18,15 @@ class Player:
         self.name: str = name
         self.maxHp: int = hp
         self.hp: int = hp
-        self.effectList: list[Effect] = [Hot("naturalHeal", 10000, hp // 100)]
+        self.effectList: list[Effect] = [
+            Hot("naturalHeal", 10000, hp // 100, isGround=True)
+        ]
         self.potency: float = potency
         self.isSurvival: bool = True
 
     def asEventUser(self, event: Event, target: Player) -> tuple[Event, Player]:
-        """作为事件的使用者, 计算自身身上的威力"""
-        if event.name == "naturalHeal" or event.eventType != EventType.Heal:
+        """作为事件的使用者, 如果是治疗事件, 计算自身身上的威力"""
+        if event.eventType == EventType.Heal and event.name != "naturalHeal":
             return event, target
         event.getBuff(self.potency)
         return event, target
@@ -40,9 +39,9 @@ class Player:
             event.getBuff(self.calPct(HealBonus))
             return event, user
         elif event.eventType == EventType.MagicDamage:
-            event.getBuff(self.calPct(MagicMtg) * self.calPct(Mtg))
+            event.getBuff(self.calPct(MagicMtg))
         elif event.eventType == EventType.PhysicsDamage:
-            event.getBuff(self.calPct(Mtg))
+            event.getBuff(self.calPct(PhysicsMtg))
         event.value = self.calDamageAfterShield(int(event.value))
         return event, user
 
@@ -53,11 +52,7 @@ class Player:
                     effect.value -= damage
                     return 0
                 damage -= int(effect.value)
-                # 对海马类技能特殊处理
-                if isinstance(effect, HaimaShield):
-                    effect.resetShield()
-                else:
-                    effect.setZero()
+                effect.setZero()
         return damage
 
     def getEffect(self, effect: Effect) -> None:
@@ -75,54 +70,35 @@ class Player:
 
         # 如果状态列表里已经有盾且新盾小于旧盾值,则不刷新
         if oldEffect := self.searchEffect(effect.name):
-            if (
-                type(effect) == Shield
-                and type(oldEffect) == Shield
-                and effect.value < oldEffect.value
-            ):
+            if effect < oldEffect:
                 return
             self.effectList.remove(oldEffect)
         self.effectList.append(effect)
 
     def dealWithReadyEvent(self, event: Event) -> None:
-        if event.eventType == EventType.Heal:
-            self.hp = min(self.maxHp, self.hp + int(event.value))
-        else:
-            if e := self.searchEffect("Macrocosmos"):
-                # 如果有大宇宙, 记录大宇宙时自身所受的伤害
-                e.value += int(event.value) / 2
-            self.hp -= int(event.value)
         for effect in event.effectList:
             self.getEffect(effect)
-        if self.hp <= 0:
-            self.isSurvival = False
+        if event.eventType in [EventType.Heal, EventType.TrueHeal]:
+            self.hp = min(self.maxHp, self.hp + int(event.value))
+            return
+        if e := self.searchEffect("Macrocosmos"):
+            # 如果有大宇宙, 记录大宇宙时自身所受的伤害
+            e.value += int(event.value) / 2
+        self.hp -= int(event.value)
+        self.isSurvival = self.hp <= 0
 
     def update(self, timeInterval: float) -> list[Event]:
         if not self.isSurvival:
             return []
         ret: list[Event] = []
-        for e in self.effectList:
-            if e.update(timeInterval):
-                if isinstance(e, (Hot, DelayHeal)):
-                    # hot类型为TrueHot以防止重复计算受疗和威力
-                    ret.append(Event(EventType.TrueHeal, e.name, e.value))
-                elif isinstance(e, Dot):
-                    # dot类型为TrueDamage以防止重复计算减伤, 但是仍能判定在盾上
-                    ret.append(Event(EventType.TrueDamage, e.name, e.value))
-                elif isinstance(e, IncreaseMaxHp):
+        for effect in self.effectList:
+            if event := effect.update(timeInterval):
+                if isinstance(effect, IncreaseMaxHp):
                     # 增加生命值上限的技能到时间了, 减少对应的上限
-                    self.maxHp = self.maxHp - int(e.value)
+                    self.maxHp = self.maxHp - int(effect.value)
                     self.hp = max(self.maxHp, self.hp)
-                elif isinstance(e, HaimaShield) and e.stack > 0:
-                    # 海马盾到期了, 转化为对应的血量
-                    ret.append(
-                        Event(
-                            EventType.TrueHeal,
-                            e.name,
-                            e.originValue * e.stack / 2,
-                            effect=Shield(e.name, e.remainTime, e.value),
-                        )
-                    )
+                else:
+                    ret.append(event)
 
         # 删除到时的buff
         self.effectList = [e for e in self.effectList if e.remainTime > 0]
@@ -130,7 +106,7 @@ class Player:
 
     def calPct(self, myType: type) -> float:
         return reduce(
-            lambda x, y: x * (y.value if (type(y) == myType) else 1),  # type: ignore
+            lambda x, y: x * (y.value if isinstance(y, myType) else 1),
             self.effectList,
             1,
         )

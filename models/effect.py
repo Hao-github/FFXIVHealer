@@ -3,6 +3,9 @@
 """
 from random import random
 
+from models.baseEffect import Effect
+from models.event import Event, EventType
+
 
 class Timer:
     def __init__(self, timeInterval: float):
@@ -17,40 +20,24 @@ class Timer:
         return False
 
 
-class Effect:
-    def __init__(self, name: str, duration: float, value: float = 0) -> None:
-        self.name: str = name
-        self.duration: float = duration
-        self.remainTime: float = duration
-        self.originValue: float = value
-        self.value: float = value
-        self.getSnapshot: bool = False
+# class Mtg(Effect):
 
-    def update(self, timeInterval: float) -> bool:
-        self.remainTime -= timeInterval
-        return False
-
-    def __str__(self) -> str:
-        return self.name + ": " + str(round(self.remainTime, 2)) + "s"
-
-    def __eq__(self, __value: object) -> bool:
-        if not isinstance(__value, Effect):
-            return False
-        return type(self) == type(__value) and self.name == __value.name
-
-    def setZero(self) -> None:
-        self.remainTime = 0
-        self.value = 0
+#     def __init__(self, name: str, duration: float, value: float) -> None:
+#         super().__init__(name, duration, value)
 
 
-class Mtg(Effect):
-    """Mitigation 减伤"""
-
+class MagicMtg(Effect):
     def __init__(self, name: str, duration: float, value: float) -> None:
         super().__init__(name, duration, value)
 
 
-class MagicMtg(Effect):
+class PhysicsMtg(Effect):
+    def __init__(self, name: str, duration: float, value: float) -> None:
+        super().__init__(name, duration, value)
+
+
+class Mtg(MagicMtg, PhysicsMtg):
+    #     """Mitigation 减伤"""
     def __init__(self, name: str, duration: float, value: float) -> None:
         super().__init__(name, duration, value)
 
@@ -82,22 +69,32 @@ class Dot(Effect):
         self.timer: Timer = Timer(3)
         self.getSnapshot = True
 
-    def update(self, timeInterval: float) -> bool:
+    def update(self, timeInterval: float) -> Event | None:
         super().update(timeInterval)
-        return self.timer.update(timeInterval)
+        if self.timer.update(timeInterval):
+            return Event(EventType.TrueDamage, self.name, self.value)
 
 
 class Hot(Effect):
     def __init__(
-        self, name: str, duration: float, value: float, interval: float = 3
+        self,
+        name: str,
+        duration: float,
+        value: float,
+        interval: float = 3,
+        isGround: bool = False,
     ) -> None:
         super().__init__(name, duration, value)
         self.timer: Timer = Timer(interval)
-        self.getSnapshot = True
+        self.getSnapshot: bool = True
+        self.isGround: bool = isGround
 
-    def update(self, timeInterval: float) -> bool:
+    def update(self, timeInterval: float) -> Event | None:
         super().update(timeInterval)
-        return self.timer.update(timeInterval)
+        if self.timer.update(timeInterval):
+            if self.isGround:
+                return Event(EventType.GroundHeal, self.name, self.value)
+            return Event(EventType.GroundHeal, self.name, self.value)
 
 
 class DelayHeal(Effect):
@@ -107,34 +104,43 @@ class DelayHeal(Effect):
         super().__init__(name, duration, value)
         self.getSnapshot = True
 
-    def update(self, timeInterval: float) -> bool:
+    def update(self, timeInterval: float) -> Event | None:
         super().update(timeInterval)
-        return self.remainTime <= 0
+        if self.remainTime <= 0:
+            return Event(EventType.TrueHeal, self.name, self.value)
 
 
-class IncreaseMaxHp(Effect):
+class IncreaseMaxHp(HealBonus):
     def __init__(self, name: str, duration: float, value: float) -> None:
         super().__init__(name, duration, value)
 
-    def update(self, timeInterval: float) -> bool:
+    def update(self, timeInterval: float) -> Event | None:
         super().update(timeInterval)
-        return self.remainTime <= 0
+        if self.remainTime <= 0:
+            return Event(EventType.TrueHeal, self.name, 0)
 
 
 class HaimaShield(Shield):
-    def __init__(
-        self, name: str, duration: float, value: float, stack: int, stackTime: int
-    ) -> None:
+    def __init__(self, name: str, duration: float, value: float) -> None:
         super().__init__(name, duration, value)
-        self.stack = stack
-        self.stackTime = stackTime
+        self.stack = 5
+        self.stackTime = 15
 
-    def update(self, timeInterval: float) -> bool:
+    def update(self, timeInterval: float) -> Event | None:
         super().update(timeInterval)
         self.stackTime -= timeInterval
-        return self.stack <= 0 or self.stackTime <= 0
-
-    def resetShield(self) -> None:
-        self.value = self.originValue
-        self.remainTime = self.duration
-        self.stack -= 1
+        # 检测到海马时间已过
+        if self.stackTime <= 0:
+            ret = Event(
+                EventType.TrueHeal,
+                self.name,
+                self.originValue * self.stack / 2,
+                effect=Shield(self.name, self.remainTime, self.value),
+            )
+            self.setZero()
+            return ret
+        # 检测到海马盾已破
+        if self.value <= 0 and self.stack > 0:
+            self.stack -= 1
+            self.remainTime = self.duration
+            self.value = self.originValue

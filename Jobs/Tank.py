@@ -1,8 +1,7 @@
 import traceback
+from models.baseEffect import Effect
 from models.effect import (
     DelayHeal,
-    Effect,
-    HealBonus,
     IncreaseMaxHp,
     MagicMtg,
     Mtg,
@@ -47,13 +46,13 @@ class Paladin(Tank):
 
     def asEventUser(self, event: Event, target: Player) -> tuple[Event, Player]:
         if event.name == "Intervention":
-            event.append(Mtg("Intervention", 8, 0.8 if self.__check() else 0.9))
+            if self.searchEffect("Rampart") or self.searchEffect("Vengeance"):
+                event.append(Mtg("Intervention", 8, 0.8))
+            else:
+                event.append(Mtg("Intervention", 8, 0.9))
+        elif event.name == "DivineVeil":
+            return event, target
         return super().asEventUser(event, target)
-
-    def __check(self) -> bool:
-        if self.searchEffect("Rampart") or self.searchEffect("Vengeance"):
-            return True
-        return False
 
     def DivineVeil(self) -> Record:
         return self.createRecord(
@@ -95,7 +94,7 @@ class Warrior(Tank):
     def __checkDefense(self) -> int:
         origin = 15
         for effect in self.effectList:
-            if effect.name in ["Bloodwhetting", "Vengeance", "TrillOfBattle"]:
+            if effect.name in ["Bloodwhetting", "Vengeance", "TrillOfBattleHB"]:
                 effect.remainTime = 0
                 origin += 2
         return origin
@@ -136,13 +135,7 @@ class Warrior(Tank):
         return self.createRecord(self, value=1200, effect=Hot("Equilibrium", 15, 200))
 
     def TrillOfBattle(self) -> Record:
-        return self.createRecord(
-            self,
-            effect=[
-                HealBonus("TrillOfBattleHB", 10, 1.2),
-                IncreaseMaxHp("TrillOfBattleIMH", 10, 1.2),
-            ],
-        )
+        return self.createRecord(self, effect=IncreaseMaxHp("TrillOfBattle", 10, 1.2))
 
 
 class GunBreaker(Tank):

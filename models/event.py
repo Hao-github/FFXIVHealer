@@ -1,4 +1,4 @@
-from models.effect import Effect
+from models.baseEffect import Effect
 from enum import Enum
 
 
@@ -8,6 +8,7 @@ class EventType(Enum):
     PhysicsDamage = 2  # 物理伤害
     MagicDamage = 3  # 魔法伤害
     TrueDamage = 4  # dot伤害
+    GroundHeal = 5 # 特殊治疗, 吃目标快照不吃施法者快照
 
 
 class Event:

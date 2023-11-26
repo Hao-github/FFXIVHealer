@@ -1,5 +1,6 @@
 import traceback
-from models.effect import Effect, Mtg, HealBonus, Hot, maxHpShield
+from models.baseEffect import Effect
+from models.effect import Mtg, HealBonus, Hot, maxHpShield
 from models.player import Player, allPlayer
 from models.record import Record
 from models.event import Event, EventType
@@ -20,9 +21,12 @@ class PhysicDPS(Player):
             self,
             target,
         )
+
     def Tactician(self) -> Record:
         return self.createRecord(allPlayer, effect=Mtg("Tactician", 15, 0.9))
 
+    def SecondWind(self) -> Record:
+        return self.createRecord(self, value=500)
 
 class Bard(PhysicDPS):
     def __init__(self, hp: int, potency: float = 0) -> None:

@@ -1,8 +1,8 @@
 from copy import deepcopy
 import traceback
+from models.baseEffect import Effect
 from models.effect import (
     DelayHeal,
-    Effect,
     HaimaShield,
     HealBonus,
     SpellBonus,
@@ -19,6 +19,7 @@ from models.record import Record
 
 # TODO: 占星: 合图, 收大宇宙
 # TODO: 贤者: 消化
+# TODO: 白学的罩子是实时判定增疗
 class Healer(Player):
     def __init__(
         self, name: str, hp: int, potency: float, spellList: list[str]
@@ -101,13 +102,7 @@ class Scholar(Healer):
         return self.createRecord(target, effect=Hot("Aetherpact", time, 300))
 
     def Protraction(self, target: Player) -> Record:
-        return self.createRecord(
-            target,
-            effect=[
-                HealBonus("ProtractionHB", 10, 1.1),
-                IncreaseMaxHp("ProtractionIMH", 10, 1.1),
-            ],
-        )
+        return self.createRecord(target, effect=IncreaseMaxHp("Protraction", 10, 1.1))
 
     # 群奶
     @petSkill
@@ -133,7 +128,10 @@ class Scholar(Healer):
         return self.createRecord(
             allPlayer,
             value=100,
-            effect=[Mtg("SacredSoilMtg", 17, 0.9), Hot("SacredSoilHB", 15, 100)],
+            effect=[
+                Mtg("SacredSoilMtg", 17, 0.9),
+                Hot("SacredSoilHB", 15, 100, isGround=True),
+            ],
         )
 
     def Indomitability(self) -> Record:
@@ -172,6 +170,7 @@ class WhiteMage(Healer):
             if e := self.searchEffect("LiturgyOfTheBell"):
                 event = Event(EventType.Heal, "LiturgyOfTheBellHeal", e.value * 200)
                 target = allPlayer
+                e.setZero()
         return super().asEventUser(event, target)
 
     def PlenaryIndulgence(self) -> Record:
@@ -179,12 +178,12 @@ class WhiteMage(Healer):
         return self.createRecord(self, effect=Effect("PlenaryIndulgence", 10))
 
     def update(self, timeInterval: float) -> list[Event]:
-        self.bellCD = max(0, self.bellCD - timeInterval)
+        self.bellCD -= timeInterval
         return super().update(timeInterval)
 
     def dealWithReadyEvent(self, event: Event) -> Record | None:
         super().dealWithReadyEvent(event)
-        if (bell := self.searchEffect("LiturgyOfTheBell")) and self.bellCD == 0:
+        if (bell := self.searchEffect("LiturgyOfTheBell")) and self.bellCD <= 0:
             bell.value -= 1
             self.bellCD = 1
             if bell.value == 0:
@@ -240,7 +239,10 @@ class WhiteMage(Healer):
         return self.createRecord(
             allPlayer,
             value=100,
-            effect=[Hot("AsylumHot", 24, 100), HealBonus("AsylumHB", 27, 1.1)],
+            effect=[
+                Hot("AsylumHot", 24, 100, isGround=True),
+                HealBonus("AsylumHB", 26, 1.1),
+            ],
         )
 
     def Assize(self) -> Record:
@@ -273,10 +275,11 @@ class Astrologian(Healer):
         if event.name == "Synastry":
             self.SynastryTarget = target
         elif event.name in self.aoeSpell:
-            if event.name == "AspectedHelios" and self.searchEffect("NeutralSect"):
-                event.append(Shield("AspectedHeliosShield", 30, 312.5))
-            elif event.name == "AspectedBenefic" and self.searchEffect("NeutralSect"):
-                event.append(Shield("AspectedBeneficShield", 30, 625))
+            if self.searchEffect("NeutralSect"):
+                if event.name == "AspectedHelios":
+                    event.append(Shield("AspectedHeliosShield", 30, 312.5))
+                else:
+                    event.append(Shield("AspectedBeneficShield", 30, 625))
             if effect := self.searchEffect("Horoscope"):
                 # TODO:会重复计算天宫图的回复
                 effect.remainTime = 30
@@ -293,7 +296,7 @@ class Astrologian(Healer):
             return
         if self.searchEffect("Synastry") and self.SynastryTarget != self:
             return Record(
-                Event(EventType.Heal, "SynastryHeal", event.value * 0.4),
+                Event(EventType.TrueHeal, "SynastryHeal", event.value * 0.4),
                 self,
                 self.SynastryTarget,
             )
@@ -316,7 +319,7 @@ class Astrologian(Healer):
 
     def CelestialIntersection(self, target: Player) -> Record:
         return self.createRecord(
-            target, value=200, effect=Shield("CelestialIntersection", 15, 400)
+            target, value=200, effect=Shield("CelestialIntersection", 30, 400)
         )
 
     def Exaltation(self, target: Player) -> Record:
@@ -348,7 +351,7 @@ class Astrologian(Healer):
 
     def NeutralSect(self) -> Record:
         # TODO: 忘记添加中间学派的治疗加成了
-        return self.createRecord(self, effect=Effect("NeutralSect", 20))
+        return self.createRecord(self, effect=HealBonus("NeutralSect", 20, 1.2))
 
     def Horoscope(self) -> Record:
         return self.createRecord(self, effect=DelayHeal("Horoscope", 10, 200))
@@ -390,7 +393,10 @@ class Sage(Healer):
         return self.createRecord(allPlayer, value=300)
 
     def PhysisII(self) -> Record:
-        return self.createRecord(allPlayer, effect=Hot("PhysisIIHot", 15, 130))
+        return self.createRecord(
+            allPlayer,
+            effect=[Hot("PhysisIIHot", 15, 130), HealBonus("PhysisIIHB", 10, 1.1)],
+        )
 
     def EkurasianDignosis(self, target: Player) -> Record:
         return self.createRecord(
@@ -434,7 +440,7 @@ class Sage(Healer):
         return self.createRecord(allPlayer, value=600)
 
     def Haima(self, target: Player) -> Record:
-        return self.createRecord(target, effect=HaimaShield("haima", 15, 300, 5, 15))
+        return self.createRecord(target, effect=HaimaShield("haima", 15, 300))
 
     def Panhaima(self) -> Record:
-        return self.createRecord(allPlayer, effect=HaimaShield("Panhaima", 15, 200, 5, 15))
+        return self.createRecord(allPlayer, effect=HaimaShield("Panhaima", 15, 200))

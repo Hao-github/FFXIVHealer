@@ -33,11 +33,12 @@ class Fight:
             # 如果已经没有记录要发生了
             if cls.recordQueue.empty():
                 return
-            # 检查dot和hot判定, 如果dot和hot跳了, 就产生一个没有延迟的prepare事件
+            # 检查buff, 如果dot和hot跳了, 或者延迟治疗时间到了, 就产生立即的prepare事件
             for player in cls.playerList:
                 cls.recordQueue.putEvent(
                     time, player.update(cls.timeInterval), player, player
                 )
+            # 从队列中抽取这一刻发生的事件
             while cls.recordQueue.happen(time):
                 record = cls.recordQueue.get()
                 if not record:
@@ -48,11 +49,11 @@ class Fight:
                         cls.recordQueue.putRecord(time, a)
                     cls.showInfo(record.event)
                     continue
+                # 否则经过生效延迟后重新丢入队列
                 record.event.prepared = True
                 record.event, record.target = record.user.asEventUser(
                     record.event, record.target
                 )
-                # 否则经过生效延迟后重新丢入队列
                 # 如果目标不是全体成员
                 if record.target != allPlayer:
                     record.event, record.user = record.target.asEventTarget(

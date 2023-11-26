@@ -1,5 +1,6 @@
 import traceback
-from models.effect import Effect, HealBonus, Hot, MagicMtg, Mtg
+from models.baseEffect import Effect
+from models.effect import HealBonus, Hot, MagicMtg, PhysicsMtg
 from models.event import Event, EventType, petSkill
 from models.player import Player, allPlayer
 from models.record import Record
@@ -22,7 +23,10 @@ class MagicDPS(Player):
         )
 
     def Addle(self) -> Record:
-        return self.createRecord(allPlayer, effect=Mtg("Addle", 10, 0.9))
+        return self.createRecord(
+            allPlayer,
+            effect=[MagicMtg("Addle", 10, 0.9), PhysicsMtg("Addle", 10, 0.95)],
+        )
 
 
 class RedMage(MagicDPS):
