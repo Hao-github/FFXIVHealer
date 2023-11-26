@@ -44,7 +44,8 @@ class Fight:
                     return
                 # 对于已经prepare的事件直接找target判定
                 if record.event.prepared:
-                    record.target.dealWithReadyEvent(record.event)
+                    if a := record.target.dealWithReadyEvent(record.event):
+                        cls.recordQueue.putRecord(time, a)
                     cls.showInfo(record.event)
                     continue
                 record.event.prepared = True

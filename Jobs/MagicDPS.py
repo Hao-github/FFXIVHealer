@@ -12,7 +12,7 @@ class MagicDPS(Player):
     def createRecord(
         self,
         target: Player,
-        value: int = 0,
+        value: float = 0,
         effect: list[Effect] | Effect = [],
     ) -> Record:
         return Record(
@@ -20,6 +20,7 @@ class MagicDPS(Player):
             self,
             target,
         )
+
     def Addle(self) -> Record:
         return self.createRecord(allPlayer, effect=Mtg("Addle", 10, 0.9))
 

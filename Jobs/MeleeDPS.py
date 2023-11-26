@@ -12,7 +12,7 @@ class MeleeDPS(Player):
         self,
         name: str,
         target: Player,
-        value: int = 0,
+        value: float = 0,
         effect: list[Effect] | Effect = [],
     ) -> Record:
         return Record(Event(EventType.Heal, name, value, effect), self, target)

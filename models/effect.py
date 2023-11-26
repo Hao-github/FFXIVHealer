@@ -22,11 +22,13 @@ class Effect:
         self.name: str = name
         self.duration: float = duration
         self.remainTime: float = duration
+        self.originValue: float = value
+        self.value: float = value
         self.getSnapshot: bool = False
-        self.value = value
 
-    def update(self, timeInterval: float) -> None:
+    def update(self, timeInterval: float) -> bool:
         self.remainTime -= timeInterval
+        return False
 
     def __str__(self) -> str:
         return self.name + ": " + str(round(self.remainTime, 2)) + "s"
@@ -117,3 +119,22 @@ class IncreaseMaxHp(Effect):
     def update(self, timeInterval: float) -> bool:
         super().update(timeInterval)
         return self.remainTime <= 0
+
+
+class HaimaShield(Shield):
+    def __init__(
+        self, name: str, duration: float, value: float, stack: int, stackTime: int
+    ) -> None:
+        super().__init__(name, duration, value)
+        self.stack = stack
+        self.stackTime = stackTime
+
+    def update(self, timeInterval: float) -> bool:
+        super().update(timeInterval)
+        self.stackTime -= timeInterval
+        return self.stack <= 0 or self.stackTime <= 0
+
+    def resetShield(self) -> None:
+        self.value = self.originValue
+        self.remainTime = self.duration
+        self.stack -= 1

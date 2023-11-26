@@ -3,6 +3,7 @@ import traceback
 from models.effect import (
     DelayHeal,
     Effect,
+    HaimaShield,
     HealBonus,
     SpellBonus,
     Hot,
@@ -16,9 +17,8 @@ from models.player import Player, allPlayer
 from models.record import Record
 
 
-# TODO: 白魔: 铃兰
-# TODO: 占星: 合图, 大宇宙
-# TODO: 贤者: 消化, 海马, 胖海马
+# TODO: 占星: 合图, 收大宇宙
+# TODO: 贤者: 消化
 class Healer(Player):
     def __init__(
         self, name: str, hp: int, potency: float, spellList: list[str]
@@ -28,13 +28,13 @@ class Healer(Player):
 
     def asEventUser(self, event: Event, target: Player) -> tuple[Event, Player]:
         if event.name in self.spellList:
-            event.getPercentage(self.spellBonus)
+            event.getBuff(self.calPct(SpellBonus))
         return super().asEventUser(event, target)
 
     def createRecord(
         self,
         target: Player,
-        value: int = 0,
+        value: float = 0,
         effect: list[Effect] | Effect = [],
     ) -> Record:
         return Record(
@@ -47,25 +47,22 @@ class Healer(Player):
 class Scholar(Healer):
     Spell: list[str] = ["Adloquium", "Succor", "Physicks"]
 
-    def __init__(self, hp: int, potency: int, criticalNum: float) -> None:
+    def __init__(self, hp: int, potency: float, critNum: float) -> None:
         super().__init__("Scholar", hp, potency, self.Spell)
         self.petCoefficient: float = 0.95
-        self.criticalNum: float = criticalNum
+        self.critNum: float = critNum
 
     def asEventUser(self, event: Event, target: Player) -> tuple[Event, Player]:
         if event.name == "Deployment":
             if e := target.searchEffect("Galvanize"):
-                ret = (
-                    Event(EventType.Heal, "Deployment", effect=deepcopy(e)),
-                    allPlayer,
-                )
+                ret = Event(EventType.Heal, "Deployment", effect=deepcopy(e))
                 e.setZero()
-                return ret
+                return super().asEventUser(ret, allPlayer)
         if event.name == "Adloquium" and self.searchEffect("Recitation"):
             event.append(Shield("Catalyze", 30, 540))
         if event.name in self.Spell + ["Indomitability", "Excogitation"]:
             if self.searchEffect("Recitation", remove=True):
-                event.getPercentage(self.criticalNum)
+                event.getBuff(self.critNum)
         if event.name in self.Spell:
             if self.searchEffect("EmergencyTactics", remove=True):
                 for e in event.effectList:
@@ -166,28 +163,35 @@ class WhiteMage(Healer):
             potency,
             ["Benefic", "BeneficII", "Regen", "AfflatusSolace"] + self.aoeSpell,
         )
-        self.bellCollDown = 0
+        self.bellCD = 0
 
     def asEventUser(self, event: Event, target: Player) -> tuple[Event, Player]:
         if event.name in self.aoeSpell and self.searchEffect("PlenaryIndulgence"):
             event.value += 200
+        elif event.name == "closeTheBell":
+            if e := self.searchEffect("LiturgyOfTheBell"):
+                event = Event(EventType.Heal, "LiturgyOfTheBellHeal", e.value * 200)
+                target = allPlayer
         return super().asEventUser(event, target)
 
     def PlenaryIndulgence(self) -> Record:
         """全大赦"""
         return self.createRecord(self, effect=Effect("PlenaryIndulgence", 10))
 
-    # def dealWithReayEvent(self, event: Event) -> Record | None:
-    #     super().dealWithReadyEvent(event)
-    #     if bell := self.searchEffect("LiturgyOfTheBell"):
-    #         bell.value -= 1
-    #         self.bellCollDown = 1
-    #         if bell.value == 0:
-    #             bell.remainTime = 0
-    #         return Event(
-    #              "LiturgyOfTheBellHeal", 400 )
-    #         )
-    #     return None
+    def update(self, timeInterval: float) -> list[Event]:
+        self.bellCD = max(0, self.bellCD - timeInterval)
+        return super().update(timeInterval)
+
+    def dealWithReadyEvent(self, event: Event) -> Record | None:
+        super().dealWithReadyEvent(event)
+        if (bell := self.searchEffect("LiturgyOfTheBell")) and self.bellCD == 0:
+            bell.value -= 1
+            self.bellCD = 1
+            if bell.value == 0:
+                bell.remainTime = 0
+            return Record(
+                Event(EventType.Heal, "LiturgyOfTheBellHeal", 400), self, allPlayer
+            )
 
     # 单奶
 
@@ -253,34 +257,51 @@ class WhiteMage(Healer):
     def LiturgyOfTheBell(self) -> Record:
         return self.createRecord(self, effect=Effect("LiturgyOfTheBell", 20, 5))
 
+    def closeTheBell(self) -> Record:
+        return self.createRecord(self)
+
 
 class Astrologian(Healer):
     aoeSpell: list[str] = ["AspectedHelios", "Helios"]
+    singleSpell: list[str] = ["Benefic", "BeneficII", "AspectedBenefic"]
 
     def __init__(self, name: str, hp: int, potency: float) -> None:
-        super().__init__(
-            name,
-            hp,
-            potency,
-            self.aoeSpell + ["Benefic", "BeneficII", "AspectedBenefic"],
-        )
+        super().__init__(name, hp, potency, self.aoeSpell + self.singleSpell)
+        self.SynastryTarget: Player = self
 
     def asEventUser(self, event: Event, target: Player) -> tuple[Event, Player]:
-        if event.name in self.aoeSpell:
+        if event.name == "Synastry":
+            self.SynastryTarget = target
+        elif event.name in self.aoeSpell:
+            if event.name == "AspectedHelios" and self.searchEffect("NeutralSect"):
+                event.append(Shield("AspectedHeliosShield", 30, 312.5))
+            elif event.name == "AspectedBenefic" and self.searchEffect("NeutralSect"):
+                event.append(Shield("AspectedBeneficShield", 30, 625))
             if effect := self.searchEffect("Horoscope"):
+                # TODO:会重复计算天宫图的回复
                 effect.remainTime = 30
-                effect.value *= 2
-        if event.name == "closeHoroscope":
+                effect.value = effect.value * 2
+        elif event.name == "closeHoroscope":
             if effect := self.searchEffect("Horoscope"):
                 event = Event(EventType.Heal, "Horoscope", effect.value)
                 target = allPlayer
-        if event.name == "AspectedHelios" and self.searchEffect("NeutralSect"):
-            event.append(Shield("AspectedHeliosShield", 30, int(250 * 1.25)))
-        elif event.name == "AspectedBenefic" and self.searchEffect("NeutralSect"):
-            event.append(Shield("AspectedBeneficShield", 30, 625))
         return super().asEventUser(event, target)
 
+    def dealWithReadyEvent(self, event: Event) -> Record | None:
+        super().dealWithReadyEvent(event)
+        if event.name not in self.singleSpell:
+            return
+        if self.searchEffect("Synastry") and self.SynastryTarget != self:
+            return Record(
+                Event(EventType.Heal, "SynastryHeal", event.value * 0.4),
+                self,
+                self.SynastryTarget,
+            )
+
     # 单奶
+
+    def Synastry(self, target: Player) -> Record:
+        return self.createRecord(target)
 
     def Benefic(self, target: Player) -> Record:
         return self.createRecord(target, value=500)
@@ -326,6 +347,7 @@ class Astrologian(Healer):
         return self.createRecord(allPlayer, value=720)
 
     def NeutralSect(self) -> Record:
+        # TODO: 忘记添加中间学派的治疗加成了
         return self.createRecord(self, effect=Effect("NeutralSect", 20))
 
     def Horoscope(self) -> Record:
@@ -333,6 +355,12 @@ class Astrologian(Healer):
 
     def closeHoroscope(self) -> Record:
         return self.createRecord(self)
+
+    def Macrocosmos(self) -> Record:
+        return self.createRecord(allPlayer, effect=DelayHeal("Macrocosmos", 15, 200))
+
+    def Microcosmos(self) -> Record:
+        return self.createRecord(allPlayer)
 
 
 class Sage(Healer):
@@ -352,7 +380,7 @@ class Sage(Healer):
 
     def asEventUser(self, event: Event, target: Player) -> tuple[Event, Player]:
         if self.searchEffect("Zoe", remove=True):
-            event.getPercentage(1.5)
+            event.getBuff(1.5)
         return super().asEventUser(event, target)
 
     def Dignosis(self, target: Player) -> Record:
@@ -404,3 +432,9 @@ class Sage(Healer):
 
     def Pneuma(self) -> Record:
         return self.createRecord(allPlayer, value=600)
+
+    def Haima(self, target: Player) -> Record:
+        return self.createRecord(target, effect=HaimaShield("haima", 15, 300, 5, 15))
+
+    def Panhaima(self) -> Record:
+        return self.createRecord(allPlayer, effect=HaimaShield("Panhaima", 15, 200, 5, 15))

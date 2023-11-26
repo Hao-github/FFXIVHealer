@@ -12,7 +12,7 @@ class PhysicDPS(Player):
     def createRecord(
         self,
         target: Player,
-        value: int = 0,
+        value: float = 0,
         effect: list[Effect] | Effect = [],
     ) -> Record:
         return Record(

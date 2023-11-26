@@ -14,7 +14,7 @@ if __name__ == "__main__":
     # Fight.addPlayer("d3", 80000)
     # Fight.addPlayer("d4", 80000)
 
-    sch = Scholar(hp=80000, potency=25, criticalNum=1.6)
+    sch = Scholar(hp=80000, potency=25, critNum=1.6)
     boss = Boss("p10s")
     Fight.addPlayer(sch)
     Fight.addRecord(0.05, boss.createMagicAOE("究极", 60000))

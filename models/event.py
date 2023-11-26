@@ -3,10 +3,11 @@ from enum import Enum
 
 
 class EventType(Enum):
-    Heal = 1
-    PhysicsDamage = 2
-    MagicDamage = 3
-    TrueDamage = 4
+    TrueHeal = 0  # 快照后的治疗
+    Heal = 1  # 普通治疗
+    PhysicsDamage = 2  # 物理伤害
+    MagicDamage = 3  # 魔法伤害
+    TrueDamage = 4  # dot伤害
 
 
 class Event:
@@ -27,11 +28,12 @@ class Event:
             self.append(effect)
         self.prepared: bool = False
 
-    def getPercentage(self, percentage: float) -> None:
+    def getBuff(self, percentage: float) -> None:
         self.value = self.value * percentage
         for effect in self.effectList:
             if effect.getSnapshot:
                 effect.value = effect.value * percentage
+                effect.originValue = effect.originValue * percentage
 
     def __str__(self) -> str:
         return self.name + ": " + str(self.value)
@@ -43,7 +45,7 @@ class Event:
 def petSkill(func):
     def wrapper(self, *args, **kwargs):
         ret: Event = func(self, *args, **kwargs)
-        ret.getPercentage(self.petCoefficient)
+        ret.getBuff(self.petCoefficient)
         return ret
 
     return wrapper
