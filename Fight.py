@@ -8,7 +8,7 @@ from models.record import Record, RecordQueue
 class Fight:
     playerList: list[Player] = []
     recordQueue: RecordQueue = RecordQueue(0.01)
-    timeInterval: float = 0.01
+    step: float = 0.01
 
     @classmethod
     def addPlayer(cls, player: Player) -> None:
@@ -20,24 +20,22 @@ class Fight:
 
     @classmethod
     def setTimeInterval(cls, timeInterval: float) -> None:
-        cls.timeInterval = timeInterval
+        cls.step = timeInterval
 
     @classmethod
     def run(cls):
         if not cls.playerList:
             return
         # resultDf: pd.DataFrame = pd.DataFrame(columns=["事件","角色"])
-        time: float = -cls.timeInterval
+        time: float = -cls.step
         while True:
-            time += cls.timeInterval
             # 如果已经没有记录要发生了
             if cls.recordQueue.empty():
                 return
+            time += cls.step
             # 检查buff, 如果dot和hot跳了, 或者延迟治疗时间到了, 就产生立即的prepare事件
             for player in cls.playerList:
-                cls.recordQueue.putEvent(
-                    time, player.update(cls.timeInterval), player, player
-                )
+                cls.recordQueue.putEvent(time, player.update(cls.step), player, player)
             # 从队列中抽取这一刻发生的事件
             while cls.recordQueue.happen(time):
                 record = cls.recordQueue.get()
@@ -51,21 +49,28 @@ class Fight:
                     continue
                 # 否则经过生效延迟后重新丢入队列
                 record.event.prepared = True
-                record.event, record.target = record.user.asEventUser(
-                    record.event, record.target
+                cls.recordQueue.putRecord(
+                    time + record.delay, cls.__forUnpreparedRecord(record)
                 )
-                # 如果目标不是全体成员
-                if record.target != allPlayer:
-                    record.event, record.user = record.target.asEventTarget(
-                        record.event, record.user
-                    )
-                    cls.recordQueue.putRecord(time + cls.timeInterval, record)
-                    continue
-                for player in cls.playerList:
-                    tmp = player.asEventTarget(deepcopy(record.event), record.user)
-                    cls.recordQueue.putRecord(
-                        time + cls.timeInterval, Record(tmp[0], tmp[1], player)
-                    )
+
+    @classmethod
+    def __forUnpreparedRecord(cls, record: Record) -> Record | list[Record]:
+        record.event.prepared = True
+        record.event, record.target = record.user.asEventUser(
+            record.event, record.target
+        )
+        # 如果目标不是全体成员
+        if record.target != allPlayer:
+            record.event, record.user = record.target.asEventTarget(
+                record.event, record.user
+            )
+            return record
+
+        ret: list[Record] = []
+        for player in cls.playerList:
+            tmp = player.asEventTarget(deepcopy(record.event), record.user)
+            ret.append(Record(tmp[0], tmp[1], player))
+        return ret
 
     @classmethod
     def showInfo(cls, event: Event):
@@ -74,9 +79,9 @@ class Fight:
         print("After Event " + event.name)
         for player in cls.playerList:
             print("状态列表: [", end="")
-            for effect in player.effectList:
-                if effect.name != "naturalHeal" and effect.remainTime > 0:
-                    print(str(effect) + ", ", end="")
+            for status in player.statusList:
+                if status.name != "naturalHeal" and status.remainTime > 0:
+                    print(str(status) + ", ", end="")
             print("]")
             print(player.name + " : " + str(player.hp))
 

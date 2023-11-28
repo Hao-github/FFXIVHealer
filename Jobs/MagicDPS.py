@@ -1,6 +1,6 @@
 import traceback
-from models.baseEffect import Effect
-from models.effect import HealBonus, Hot, MagicMtg, PhysicsMtg
+from models.baseStatus import BaseStatus
+from models.status import HealBonus, Hot, MagicMtg, PhysicsMtg
 from models.event import Event, EventType, petSkill
 from models.player import Player, allPlayer
 from models.record import Record
@@ -8,16 +8,16 @@ from models.record import Record
 
 class MagicDPS(Player):
     def __init__(self, name: str, hp: int, potency: float) -> None:
-        super().__init__(name, hp, potency)
+        super().__init__(name, hp, potency, 0.73, 0.84)
 
     def createRecord(
         self,
         target: Player,
         value: float = 0,
-        effect: list[Effect] | Effect = [],
+        status: list[BaseStatus] | BaseStatus = [],
     ) -> Record:
         return Record(
-            Event(EventType.Heal, traceback.extract_stack()[-2][2], value, effect),
+            Event(EventType.Heal, traceback.extract_stack()[-2][2], value, status),
             self,
             target,
         )
@@ -25,7 +25,7 @@ class MagicDPS(Player):
     def Addle(self) -> Record:
         return self.createRecord(
             allPlayer,
-            effect=[MagicMtg("Addle", 10, 0.9), PhysicsMtg("Addle", 10, 0.95)],
+            status=[MagicMtg("Addle", 10, 0.9), PhysicsMtg("Addle", 10, 0.95)],
         )
 
 
@@ -36,9 +36,9 @@ class RedMage(MagicDPS):
     def MagickBarrier(self) -> Record:
         return self.createRecord(
             allPlayer,
-            effect=[
-                MagicMtg("MagickBarrierMMtg", 10, 0.9),
-                HealBonus("MagickBarrierHB", 10, 1.05),
+            status=[
+                MagicMtg("MagickBarrier", 10, 0.9),
+                HealBonus("MagickBarrier", 10, 1.05),
             ],
         )
 
@@ -53,7 +53,7 @@ class Summoner(MagicDPS):
 
     @petSkill
     def EverlastingFlight(self) -> Record:
-        return self.createRecord(allPlayer, effect=Hot("EverLastingFlight", 21, 100))
+        return self.createRecord(allPlayer, status=Hot("EverLastingFlight", 21, 100))
 
     @petSkill
     def Rekindle(self, target: Player) -> Record:

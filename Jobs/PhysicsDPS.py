@@ -1,42 +1,43 @@
 import traceback
-from models.baseEffect import Effect
-from models.effect import Mtg, HealBonus, Hot, maxHpShield
+from models.baseStatus import BaseStatus
+from models.status import Mtg, HealBonus, Hot, maxHpShield
 from models.player import Player, allPlayer
 from models.record import Record
 from models.event import Event, EventType
 
 
-class PhysicDPS(Player):
+class PhysicsDPS(Player):
     def __init__(self, name: str, hp: int, potency: float) -> None:
-        super().__init__(name, hp, potency)
+        super().__init__(name, hp, potency, 0.78, 0.78)
 
     def createRecord(
         self,
         target: Player,
         value: float = 0,
-        effect: list[Effect] | Effect = [],
+        status: list[BaseStatus] | BaseStatus = [],
     ) -> Record:
         return Record(
-            Event(EventType.Heal, traceback.extract_stack()[-2][2], value, effect),
+            Event(EventType.Heal, traceback.extract_stack()[-2][2], value, status),
             self,
             target,
         )
 
     def Tactician(self) -> Record:
-        return self.createRecord(allPlayer, effect=Mtg("Tactician", 15, 0.9))
+        return self.createRecord(allPlayer, status=Mtg("Tactician", 15, 0.9))
 
     def SecondWind(self) -> Record:
         return self.createRecord(self, value=500)
 
-class Bard(PhysicDPS):
+
+class Bard(PhysicsDPS):
     def __init__(self, hp: int, potency: float = 0) -> None:
         super().__init__("Bard", hp, potency)
 
     def NaturesMinne(self) -> Record:
-        return self.createRecord(allPlayer, effect=HealBonus("NaturesMinne", 15, 1.15))
+        return self.createRecord(allPlayer, status=HealBonus("NaturesMinne", 15, 1.15))
 
 
-class Dancer(PhysicDPS):
+class Dancer(PhysicsDPS):
     def __init__(self, hp: int, potency: float = 0) -> None:
         super().__init__("Dancer", hp, potency)
 
@@ -44,9 +45,9 @@ class Dancer(PhysicDPS):
         stackList = [5, 6, 7, 8, 10]
         return self.createRecord(
             allPlayer,
-            effect=[
-                maxHpShield("ImprovisationShield", 30, stackList[stack]),
-                Hot("ImprovisationHot", 15, 100),
+            status=[
+                maxHpShield("Improvisation", 30, stackList[stack]),
+                Hot("Improvisation", 15, 100),
             ],
         )
 
@@ -54,9 +55,9 @@ class Dancer(PhysicDPS):
         return self.createRecord(allPlayer, value=300)
 
 
-class Machinist(PhysicDPS):
+class Machinist(PhysicsDPS):
     def __init__(self, hp: int, potency: float = 0) -> None:
         super().__init__("Machinist", hp, potency)
 
     def Dismantle(self) -> Record:
-        return self.createRecord(allPlayer, effect=Mtg("Dismantle", 10, 0.9))
+        return self.createRecord(allPlayer, status=Mtg("Dismantle", 10, 0.9))

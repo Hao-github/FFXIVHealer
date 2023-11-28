@@ -9,10 +9,13 @@ class Record:
     在此, 具体含义为user do event to target
     """
 
-    def __init__(self, event: Event, user: Player, target: Player) -> None:
+    def __init__(
+        self, event: Event, user: Player, target: Player, delay: float = 0
+    ) -> None:
         self.user: Player = user
         self.target: Player = target
         self.event: Event = event
+        self.delay: float = delay
 
 
 class RecordQueue:

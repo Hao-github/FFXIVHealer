@@ -3,7 +3,7 @@
 """
 from random import random
 
-from models.baseEffect import Effect
+from models.baseStatus import BaseStatus
 from models.event import Event, EventType
 
 
@@ -20,18 +20,12 @@ class Timer:
         return False
 
 
-# class Mtg(Effect):
-
-#     def __init__(self, name: str, duration: float, value: float) -> None:
-#         super().__init__(name, duration, value)
-
-
-class MagicMtg(Effect):
+class MagicMtg(BaseStatus):
     def __init__(self, name: str, duration: float, value: float) -> None:
         super().__init__(name, duration, value)
 
 
-class PhysicsMtg(Effect):
+class PhysicsMtg(BaseStatus):
     def __init__(self, name: str, duration: float, value: float) -> None:
         super().__init__(name, duration, value)
 
@@ -42,28 +36,28 @@ class Mtg(MagicMtg, PhysicsMtg):
         super().__init__(name, duration, value)
 
 
-class Shield(Effect):
+class Shield(BaseStatus):
     def __init__(self, name: str, duration: float, value: float) -> None:
         super().__init__(name, duration, value)
         self.getSnapshot = True
 
 
-class maxHpShield(Effect):
+class maxHpShield(BaseStatus):
     def __init__(self, name: str, duration: float, value: float) -> None:
         super().__init__(name, duration, value)
 
 
-class HealBonus(Effect):
+class HealBonus(BaseStatus):
     def __init__(self, name: str, duration: float, value: float) -> None:
         super().__init__(name, duration, value)
 
 
-class SpellBonus(Effect):
+class SpellBonus(BaseStatus):
     def __init__(self, name: str, duration: float, value: float) -> None:
         super().__init__(name, duration, value)
 
 
-class Dot(Effect):
+class Dot(BaseStatus):
     def __init__(self, name: str, duration: float, value: float) -> None:
         super().__init__(name, duration, value)
         self.timer: Timer = Timer(3)
@@ -75,7 +69,7 @@ class Dot(Effect):
             return Event(EventType.TrueDamage, self.name, self.value)
 
 
-class Hot(Effect):
+class Hot(BaseStatus):
     def __init__(
         self,
         name: str,
@@ -94,15 +88,17 @@ class Hot(Effect):
         if self.timer.update(timeInterval):
             if self.isGround:
                 return Event(EventType.GroundHeal, self.name, self.value)
-            return Event(EventType.GroundHeal, self.name, self.value)
+            return Event(EventType.TrueHeal, self.name, self.value)
 
 
-class DelayHeal(Effect):
+class DelayHeal(BaseStatus):
     """Delay Heal, 指延迟治疗"""
 
-    def __init__(self, name: str, duration: float, value: float) -> None:
+    def __init__(
+        self, name: str, duration: float, value: float, snapshot: bool = True
+    ) -> None:
         super().__init__(name, duration, value)
-        self.getSnapshot = True
+        self.getSnapshot = snapshot
 
     def update(self, timeInterval: float) -> Event | None:
         super().update(timeInterval)
@@ -135,7 +131,7 @@ class HaimaShield(Shield):
                 EventType.TrueHeal,
                 self.name,
                 self.originValue * self.stack / 2,
-                effect=Shield(self.name, self.remainTime, self.value),
+                status=Shield(self.name, self.remainTime, self.value),
             )
             self.setZero()
             return ret

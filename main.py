@@ -1,7 +1,6 @@
 from models.boss import Boss
 from Fight import Fight
 from Jobs.Healer import Scholar
-# from .models.effect import Dot
 
 
 if __name__ == "__main__":
