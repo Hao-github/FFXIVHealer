@@ -12,7 +12,7 @@ class BaseStatus:
         self.value: float = value
         self.getSnapshot: bool = False
 
-    def update(self, timeInterval: float) -> None:
+    def update(self, timeInterval: float, **kwargs) -> None:
         self.remainTime -= timeInterval
 
     def __str__(self) -> str:

@@ -98,6 +98,8 @@ class Player:
                 status.setZero()
 
     def dealWithReadyEvent(self, event: Event) -> None:
+        if not self.isSurvival:
+            return
         for status in event.statusList:
             self.getStatus(status)
 
@@ -119,7 +121,7 @@ class Player:
             # 如果有大宇宙, 记录大宇宙时自身所受的伤害
             e.value += int(event.value) / 2
         self.hp -= int(event.value)
-        self.isSurvival = self.hp <= 0
+        self.isSurvival = self.hp > 0
 
     def update(self, timeInterval: float) -> list[Event]:
         """更新所有的status, 如果status, 并返回所有status产生的event"""
@@ -127,7 +129,7 @@ class Player:
             return []
         ret: list[Event] = []
         for status in self.statusList:
-            if event := status.update(timeInterval):
+            if event := status.update(timeInterval, hpPercentage=self.hp / self.maxHp):
                 if isinstance(status, IncreaseMaxHp):
                     # 增加生命值上限的技能到时间了, 减少对应的上限
                     self.maxHp -= int(status.value)

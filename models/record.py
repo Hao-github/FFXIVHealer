@@ -17,6 +17,14 @@ class Record:
         self.event: Event = event
         self.delay: float = delay
 
+    def __str__(self) -> str:
+        return "user: {0}, target: {1}, event: {2}".format(
+            self.user.name, self.target.name, self.event
+        )
+        
+    def __lt__(self, __value: object) -> bool:
+        return False
+
 
 class RecordQueue:
     def __init__(self, timeInterval: float) -> None:

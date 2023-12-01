@@ -1,22 +1,48 @@
 from copy import deepcopy
 import pandas as pd
 from models.player import Player, allPlayer
-from models.event import Event
+from models.event import Event, EventType
 from models.record import Record, RecordQueue
+from models.status import Dot
 
 
 class Fight:
-    playerList: list[Player] = []
+    playerList: dict[str, Player] = {}
     recordQueue: RecordQueue = RecordQueue(0.01)
     step: float = 0.01
 
     @classmethod
-    def addPlayer(cls, player: Player) -> None:
-        cls.playerList.append(player)
+    def addPlayer(cls, name: str, player: Player) -> None:
+        cls.playerList[name] = player
 
     @classmethod
     def addRecord(cls, time: float, record: Record) -> None:
         cls.recordQueue.putRecord(time, record)
+
+    @classmethod
+    def addBossSkills(cls, fileName: str, boss: Player) -> None:
+        def RowToRecord(row: pd.Series):
+            record = Record(
+                Event(
+                    EventType.MagicDamage
+                    if row["type"] == "magic"
+                    else EventType.PhysicsDamage,
+                    name=row["name"],
+                    value=row["damage"],
+                ),
+                user=boss,
+                target=allPlayer,
+                delay=row["delay"],
+            )
+            if row["hasDot"]:
+                record.event.append(
+                    Dot(record.event.name, row["dotTime"], row["dotDamage"])
+                )
+                
+            m, s = row["prepareTime"].strip().split(":")
+            cls.addRecord(int(m) * 60 + float(s), record)
+            return row["prepareTime"]
+        pd.read_csv(fileName).apply(RowToRecord, axis=1)
 
     @classmethod
     def setTimeInterval(cls, timeInterval: float) -> None:
@@ -34,7 +60,7 @@ class Fight:
                 return
             time += cls.step
             # 检查buff, 如果dot和hot跳了, 或者延迟治疗时间到了, 就产生立即的prepare事件
-            for player in cls.playerList:
+            for player in cls.playerList.values():
                 cls.recordQueue.putEvent(time, player.update(cls.step), player, player)
             # 从队列中抽取这一刻发生的事件
             while cls.recordQueue.happen(time):
@@ -67,7 +93,7 @@ class Fight:
             return record
 
         ret: list[Record] = []
-        for player in cls.playerList:
+        for player in cls.playerList.values():
             tmp = player.asEventTarget(deepcopy(record.event), record.user)
             ret.append(Record(tmp[0], tmp[1], player))
         return ret
@@ -77,7 +103,7 @@ class Fight:
         if event.name == "naturalHeal":
             return
         print("After Event " + event.name)
-        for player in cls.playerList:
+        for player in cls.playerList.values():
             print("状态列表: [", end="")
             for status in player.statusList:
                 if status.name != "naturalHeal" and status.remainTime > 0:

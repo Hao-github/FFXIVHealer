@@ -266,8 +266,8 @@ class Astrologian(Healer):
     aoeSpell: list[str] = ["AspectedHelios", "Helios"]
     singleSpell: list[str] = ["Benefic", "BeneficII", "AspectedBenefic"]
 
-    def __init__(self, name: str, hp: int, potency: float) -> None:
-        super().__init__(name, hp, potency, self.aoeSpell + self.singleSpell)
+    def __init__(self, hp: int, potency: float) -> None:
+        super().__init__("Astrologian", hp, potency, self.aoeSpell + self.singleSpell)
         self.SynastryTarget: Player = self
 
     def asEventUser(self, event: Event, target: Player) -> tuple[Event, Player]:
@@ -354,13 +354,13 @@ class Astrologian(Healer):
     def NeutralSect(self) -> Record:
         return self.createRecord(self, status=HealBonus("NeutralSect", 20, 1.2))
 
-    def Horoscope(self) -> Record:
-        return self.createRecord(
-            self, status=DelayHeal("Horoscope", 10, 200, snapshot=False)
-        )
+    # def Horoscope(self) -> Record:
+    #     return self.createRecord(
+    #         self, status=DelayHeal("Horoscope", 10, 200, snapshot=False)
+    #     )
 
-    def closeHoroscope(self) -> Record:
-        return self.createRecord(self)
+    # def closeHoroscope(self) -> Record:
+    #     return self.createRecord(self)
 
     def Macrocosmos(self) -> Record:
         return self.createRecord(allPlayer, status=DelayHeal("Macrocosmos", 15, 200))

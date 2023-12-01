@@ -63,7 +63,7 @@ class Dot(BaseStatus):
         self.timer: Timer = Timer(3)
         self.getSnapshot = True
 
-    def update(self, timeInterval: float) -> Event | None:
+    def update(self, timeInterval: float, **kwargs) -> Event | None:
         super().update(timeInterval)
         if self.timer.update(timeInterval):
             return Event(EventType.TrueDamage, self.name, self.value)
@@ -83,7 +83,7 @@ class Hot(BaseStatus):
         self.getSnapshot: bool = True
         self.isGround: bool = isGround
 
-    def update(self, timeInterval: float) -> Event | None:
+    def update(self, timeInterval: float, **kwargs) -> Event | None:
         super().update(timeInterval)
         if self.timer.update(timeInterval):
             if self.isGround:
@@ -99,10 +99,11 @@ class DelayHeal(BaseStatus):
     ) -> None:
         super().__init__(name, duration, value)
         self.getSnapshot = snapshot
+        self.trigger: float = 0.5
 
-    def update(self, timeInterval: float) -> Event | None:
+    def update(self, timeInterval: float, hpPercentage: float) -> Event | None:
         super().update(timeInterval)
-        if self.remainTime <= 0:
+        if self.remainTime <= 0 or hpPercentage < self.trigger:
             return Event(EventType.TrueHeal, self.name, self.value)
 
 
@@ -110,7 +111,7 @@ class IncreaseMaxHp(HealBonus):
     def __init__(self, name: str, duration: float, value: float) -> None:
         super().__init__(name, duration, value)
 
-    def update(self, timeInterval: float) -> Event | None:
+    def update(self, timeInterval: float, **kwargs) -> Event | None:
         super().update(timeInterval)
         if self.remainTime <= 0:
             return Event(EventType.TrueHeal, self.name, 0)
@@ -122,7 +123,7 @@ class HaimaShield(Shield):
         self.stack = 5
         self.stackTime = 15
 
-    def update(self, timeInterval: float) -> Event | None:
+    def update(self, timeInterval: float, **kwargs) -> Event | None:
         super().update(timeInterval)
         self.stackTime -= timeInterval
         # 检测到海马时间已过

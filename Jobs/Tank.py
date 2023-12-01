@@ -16,7 +16,7 @@ from models.record import Record
 
 class Tank(Player):
     def __init__(self, name: str, hp: int, potency: float) -> None:
-        super().__init__(name, hp, potency, 0.6, 0.6)
+        super().__init__(name, hp, potency, 0.48, 0.48)
 
     def createRecord(
         self,
@@ -81,6 +81,9 @@ class Paladin(Tank):
             status=[Mtg("Knight'sResolve", 4, 0.9), Hot("Knight'sResolve", 12, 250)],
         )
 
+    def HallowedGround(self) -> Record:
+        return self.createRecord(self, status=Shield("HallowedGround", 10, 1000000))
+
 
 class Warrior(Tank):
     def __init__(self, hp: int, potency: float) -> None:
@@ -90,6 +93,12 @@ class Warrior(Tank):
         if event.name == "ShakeItOff":
             event.append(maxHpShield("ShakeItOffShield", 30, self.__checkDefense()))
         return super().asEventUser(event, target)
+
+    def dealWithReadyEvent(self, event: Event) -> None:
+        super().dealWithReadyEvent(event)
+        if not self.isSurvival and self.searchStatus("Holmgang"):
+            self.isSurvival = True
+            self.hp = 1
 
     def __checkDefense(self) -> int:
         origin = 15
@@ -136,6 +145,9 @@ class Warrior(Tank):
     def TrillOfBattle(self) -> Record:
         return self.createRecord(self, status=IncreaseMaxHp("TrillOfBattle", 10, 1.2))
 
+    def Holmgang(self) -> Record:
+        return self.createRecord(self, status=BaseStatus("Holmgang", 10))
+
 
 class GunBreaker(Tank):
     def __init__(self, hp: int, potency: float) -> None:
@@ -144,6 +156,8 @@ class GunBreaker(Tank):
     def asEventUser(self, event: Event, target: Player) -> tuple[Event, Player]:
         if event.name == "HeartOfCorundum" and target != self:
             event.append(Shield("Brutal", 30, 200))
+        elif event.name == "Superbolide":
+            self.hp = 1
         return super().asEventUser(event, target)
 
     def HeartOfLight(self) -> Record:
@@ -165,10 +179,19 @@ class GunBreaker(Tank):
             ],
         )
 
+    def Superbolide(self) -> Record:
+        return self.createRecord(self, status=Shield("Superbolide", 10, 1000000))
+
 
 class DarkKnight(Tank):
     def __init__(self, hp: int, potency: float) -> None:
         super().__init__("DarkKnight", hp, potency)
+
+    def dealWithReadyEvent(self, event: Event) -> None:
+        super().dealWithReadyEvent(event)
+        if not self.isSurvival and self.searchStatus("LivingDead"):
+            self.isSurvival = True
+            self.hp = 1
 
     def DarkMissionary(self) -> Record:
         return self.createRecord(self, status=MagicMtg("DarkMissionary", 15, 0.9))
@@ -181,3 +204,6 @@ class DarkKnight(Tank):
 
     def Oblation(self, target: Player) -> Record:
         return self.createRecord(target, status=Mtg("Oblation", 10, 0.9))
+
+    def LivingDead(self) -> Record:
+        return self.createRecord(self, status=BaseStatus("LivingDead", 10))
