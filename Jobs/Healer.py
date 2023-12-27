@@ -1,4 +1,3 @@
-from copy import deepcopy
 import traceback
 from models.baseStatus import BaseStatus
 from models.status import (
@@ -45,29 +44,31 @@ class Healer(Player):
 
 
 class Scholar(Healer):
-    Spell: list[str] = ["Adloquium", "Succor", "Physicks"]
+    Spell: list[str] = ["Adloquium", "Succor"]
 
     def __init__(self, hp: int, potency: float, critNum: float) -> None:
-        super().__init__("Scholar", hp, potency, self.Spell)
+        super().__init__("Scholar", hp, potency, self.Spell + ["Physics"])
         self.petCoefficient: float = 0.95
         self.critNum: float = critNum
 
     def asEventUser(self, event: Event, target: Player) -> tuple[Event, Player]:
         if event.name == "Deployment":
-            if e := target.searchStatus("Galvanize", Shield):
-                ret = Event(EventType.Heal, "Deployment", status=deepcopy(e))
-                e.setZero()
+            if status := target.removeStatus("Galvanize"):
+                ret = Event(EventType.Heal, "Deployment", status=status)
                 return super().asEventUser(ret, allPlayer)
-        if event.name == "Adloquium" and self.searchStatus("Recitation", BaseStatus):
+        elif event.name == "Adloquium" and self.removeStatus("Recitation"):
             event.append(Shield("Catalyze", 30, 540))
-        if event.name in self.Spell + ["Indomitability", "Excogitation"]:
-            if self.searchStatus("Recitation", remove=True):
-                event.getBuff(self.critNum)
-        if event.name in self.Spell:
-            if self.searchStatus("EmergencyTactics", remove=True):
-                for e in event.statusList:
-                    event.value += e.value
-                    e.setZero()
+            event.getBuff(self.critNum)
+        elif event.name in [
+            "Succor",
+            "Indomitability",
+            "Excogitation",
+        ] and self.removeStatus("Recitation"):
+            event.getBuff(self.critNum)
+        elif event.name in self.Spell and self.removeStatus("EmergencyTactics"):
+            for e in event.statusList:
+                event.value += e.value
+            event.statusList.clear()
         return super().asEventUser(event, target)
 
     def Recitation(self) -> Record:
@@ -80,7 +81,7 @@ class Scholar(Healer):
         return self.createRecord(target)
 
     def EmergencyTactics(self) -> Record:
-        return self.createRecord(self)
+        return self.createRecord(self, status=BaseStatus("EmergencyTactics", 15))
 
     # 单奶
 
@@ -166,10 +167,9 @@ class WhiteMage(Healer):
         if event.name in self.aoeSpell and self.searchStatus("PlenaryIndulgence"):
             event.value += 200
         elif event.name == "closeTheBell":
-            if e := self.searchStatus("LiturgyOfTheBell"):
+            if e := self.removeStatus("LiturgyOfTheBell"):
                 event = Event(EventType.Heal, "LiturgyHeal", e.value * 200)
                 target = allPlayer
-                e.setZero()
         return super().asEventUser(event, target)
 
     def PlenaryIndulgence(self) -> Record:
@@ -271,42 +271,39 @@ class Astrologian(Healer):
         self.SynastryTarget: Player = self
 
     def asEventUser(self, event: Event, target: Player) -> tuple[Event, Player]:
-        if event.name == "Synastry":
-            self.SynastryTarget = target
-        elif event.name in self.aoeSpell:
+        # if event.name == "Synastry":
+        #     self.SynastryTarget = target
+        if event.name in self.aoeSpell:
             if self.searchStatus("NeutralSect"):
                 if event.name == "AspectedHelios":
                     event.append(Shield("AspectedHeliosShield", 30, 312.5))
                 else:
                     event.append(Shield("AspectedBeneficShield", 30, 625))
-            if status := self.searchStatus("Horoscope"):
-                # TODO:会重复计算天宫图的回复
-                status.remainTime = 30
-                status.value = status.value * 2
-        elif event.name == "closeHoroscope":
-            if status := self.searchStatus("Horoscope"):
-                status.remainTime = 0
-        elif event.name == "Horoscope" and event.eventType == EventType.TrueHeal:
-            # 表示天宫图时间归0, 将天宫图事件转为群奶
-            event.value *= self.potency
-            target = allPlayer
+        #     if self.searchStatus("Horoscope", remove=True):
+        #         self.getStatus(BaseStatus("HugeMoroscope", 30, 400))
+        # elif event.name == "closeHoroscope":
+        #     self.__setStatusZero("Horoscope")
+        # elif event.name == "Horoscope" and event.eventType == EventType.TrueHeal:
+        #     # 表示天宫图时间归0, 将天宫图事件转为群奶
+        #     event.value *= self.potency
+        #     target = allPlayer
         return super().asEventUser(event, target)
 
-    def dealWithReadyEvent(self, event: Event) -> Record | None:
-        super().dealWithReadyEvent(event)
-        if event.name not in self.singleSpell:
-            return
-        if self.searchStatus("Synastry") and self.SynastryTarget != self:
-            return Record(
-                Event(EventType.TrueHeal, "SynastryHeal", event.value * 0.4),
-                self,
-                self.SynastryTarget,
-            )
-
+    # def dealWithReadyEvent(self, event: Event) -> Record | None:
+    #     super().dealWithReadyEvent(event)
+    #     if event.name not in self.singleSpell:
+    #         return
+    #     if self.searchStatus("Synastry") and self.SynastryTarget != self:
+    #         return Record(
+    #             Event(EventType.TrueHeal, "SynastryHeal", event.value * 0.4),
+    #             self,
+    #             self.SynastryTarget,
+    #         )
+    # TODO: 暂时注释掉天宫图和星位和图的逻辑
     # 单奶
 
-    def Synastry(self, target: Player) -> Record:
-        return self.createRecord(target)
+    # def Synastry(self, target: Player) -> Record:
+    #     return self.createRecord(target)
 
     def Benefic(self, target: Player) -> Record:
         return self.createRecord(target, value=500)
@@ -354,10 +351,8 @@ class Astrologian(Healer):
     def NeutralSect(self) -> Record:
         return self.createRecord(self, status=HealBonus("NeutralSect", 20, 1.2))
 
-    # def Horoscope(self) -> Record:
-    #     return self.createRecord(
-    #         self, status=DelayHeal("Horoscope", 10, 200, snapshot=False)
-    #     )
+    def Horoscope(self) -> Record:
+        return self.createRecord(self, status=BaseStatus("Horoscope", 10, 200))
 
     # def closeHoroscope(self) -> Record:
     #     return self.createRecord(self)
@@ -385,7 +380,7 @@ class Sage(Healer):
         )
 
     def asEventUser(self, event: Event, target: Player) -> tuple[Event, Player]:
-        if self.searchStatus("Zoe", remove=True):
+        if self.removeStatus("Zoe"):
             event.getBuff(1.5)
         return super().asEventUser(event, target)
 

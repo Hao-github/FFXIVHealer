@@ -94,16 +94,13 @@ class Hot(BaseStatus):
 class DelayHeal(BaseStatus):
     """Delay Heal, 指延迟治疗"""
 
-    def __init__(
-        self, name: str, duration: float, value: float, snapshot: bool = True
-    ) -> None:
+    def __init__(self, name: str, duration: float, value: float) -> None:
         super().__init__(name, duration, value)
-        self.getSnapshot = snapshot
         self.trigger: float = 0.5
 
     def update(self, timeInterval: float, hpPercentage: float) -> Event | None:
         super().update(timeInterval)
-        if self.remainTime <= 0 or hpPercentage < self.trigger:
+        if self.remainTime <= 0 or hpPercentage < self.trigger: # TODO: 会持续触发治疗
             return Event(EventType.TrueHeal, self.name, self.value)
 
 
@@ -114,7 +111,7 @@ class IncreaseMaxHp(HealBonus):
     def update(self, timeInterval: float, **kwargs) -> Event | None:
         super().update(timeInterval)
         if self.remainTime <= 0:
-            return Event(EventType.TrueHeal, self.name, 0)
+            return Event(EventType.MaxHpChange, self.name, self.value)
 
 
 class HaimaShield(Shield):
@@ -122,6 +119,11 @@ class HaimaShield(Shield):
         super().__init__(name, duration, value)
         self.stack = 5
         self.stackTime = 15
+        self.originValue = value
+
+    def getBuff(self, percentage: float) -> BaseStatus:
+        self.originValue *= percentage
+        return super().getBuff(percentage)
 
     def update(self, timeInterval: float, **kwargs) -> Event | None:
         super().update(timeInterval)

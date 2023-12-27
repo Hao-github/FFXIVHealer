@@ -1,3 +1,4 @@
+from functools import reduce
 import traceback
 from models.baseStatus import BaseStatus
 from models.status import (
@@ -50,8 +51,6 @@ class Paladin(Tank):
                 event.append(Mtg("Intervention", 8, 0.8))
             else:
                 event.append(Mtg("Intervention", 8, 0.9))
-        elif event.name == "DivineVeil":
-            return event, target
         return super().asEventUser(event, target)
 
     def DivineVeil(self) -> Record:
@@ -101,11 +100,11 @@ class Warrior(Tank):
             self.hp = 1
 
     def __checkDefense(self) -> int:
-        origin = 15
-        for statusName in ["Bloodwhetting", "Vengeance", "TrillOfBattleHB"]:
-            if self.searchStatus(statusName, remove=True):
-                origin += 2
-        return origin
+        return reduce(
+            lambda x, y: x + 2 if self.removeStatus(y) else x,
+            ["Bloodwhetting", "Vengeance", "TrillOfBattleHB"],
+            15,
+        )
 
     def ShakeItOff(self) -> Record:
         return self.createRecord(

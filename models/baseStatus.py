@@ -3,12 +3,11 @@ from __future__ import annotations
 
 class BaseStatus:
     conflict = ["Galavinze", "EkurasianPrognosis", "EkurasianDignosis"]
-    
+
     def __init__(self, name: str, duration: float, value: float = 0) -> None:
         self.name: str = name
         self.duration: float = duration
         self.remainTime: float = duration
-        self.originValue: float = value
         self.value: float = value
         self.getSnapshot: bool = False
 
@@ -30,11 +29,9 @@ class BaseStatus:
 
     def setZero(self) -> BaseStatus:
         self.remainTime = 0
-        self.value = 0
         return self
 
     def getBuff(self, percentage: float) -> BaseStatus:
         if self.getSnapshot:
-            self.originValue *= percentage
             self.value *= percentage
         return self

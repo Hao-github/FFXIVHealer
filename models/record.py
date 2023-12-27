@@ -1,6 +1,6 @@
+import heapq
 from models.player import Player
 from models.event import Event
-from queue import PriorityQueue
 
 
 class Record:
@@ -21,41 +21,23 @@ class Record:
         return "user: {0}, target: {1}, event: {2}".format(
             self.user.name, self.target.name, self.event
         )
-        
-    def __lt__(self, __value: object) -> bool:
-        return False
 
 
-class RecordQueue:
-    def __init__(self, timeInterval: float) -> None:
-        self.recordqueue: PriorityQueue = PriorityQueue()
-        self.timeInterval: float = timeInterval
+class RecordQueue(object):
+    def __init__(self):
+        self._queue: list[tuple[float, int, list[Record]]] = []
+        self._index = 0
 
-    def putRecord(self, time: float, record: Record | list[Record]) -> None:
-        if isinstance(record, Record):
-            self.recordqueue.put((time, record))
-            return
-        for r in record:
-            self.recordqueue.put((time, r))
+    def push(self, time: float, record: list[Record]):
+        heapq.heappush(self._queue, (-time, self._index, record))
+        self._index += 1
 
-    def putEvent(
-        self, time: float, event: Event | list[Event], user: Player, target: Player
-    ) -> None:
-        if isinstance(event, Event):
-            self.recordqueue.put((time, Record(event, user, target)))
-            return
-        for e in event:
-            self.recordqueue.put((time, Record(e, user, target)))
+    def pop(self) -> list[Record]:
+        return heapq.heappop(self._queue)[2]
 
-    def get(self) -> Record | None:
-        if self.empty():
-            return None
-        return self.recordqueue.get()[1]
+    @property
+    def nextRecordTime(self) -> float:
+        return self._queue[0][0]
 
-    def happen(self, time: float) -> bool | None:
-        if self.empty():
-            return None
-        return 0 <= (self.recordqueue.queue[0][0] - time) < self.timeInterval
-
-    def empty(self) -> bool:
-        return self.recordqueue.empty()
+    def empty(self):
+        return True if not self._queue else False

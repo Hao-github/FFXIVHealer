@@ -10,6 +10,7 @@ class EventType(Enum):
     PhysicsDamage = 3  # 物理伤害
     MagicDamage = 4  # 魔法伤害
     TrueDamage = 5  # dot伤害
+    MaxHpChange = 6 # 关于最大生命值的变动事件
 
 
 class Event:
