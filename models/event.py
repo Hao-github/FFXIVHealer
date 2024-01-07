@@ -39,12 +39,10 @@ class Event:
         return self
 
     def __str__(self) -> str:
-        return (
-            self.name
-            + ": "
-            + str(self.value)
-            + ", EventType: "
-            + ("magic" if self.eventType == EventType.MagicDamage else "physics")
+        return "{0}: {1}, EventType: {2}".format(
+            self.name,
+            str(self.value),
+            ("magic" if self.eventType == EventType.MagicDamage else "physics"),
         )
 
     def append(self, status: BaseStatus) -> None:

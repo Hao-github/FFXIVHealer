@@ -30,8 +30,8 @@ class Fight:
                 cls.recordQueue.push(time, dotAndHotList)
             # 如果当前时间大于等于最近的事件的发生时间
             while time >= cls.recordQueue.nextRecordTime:
-                nextRecord = cls.recordQueue.pop()
-                for record in nextRecord[2]:
+                nextRecordList = cls.recordQueue.pop()
+                for record in nextRecordList[2]:
                     if not record.event.prepared:
                         cls.recordQueue.push(
                             time + record.delay, cls.__forUnpreparedRecord(record)
@@ -39,7 +39,7 @@ class Fight:
                     else:
                         if a := record.target.dealWithReadyEvent(record.event):
                             cls.recordQueue.push(time, a)
-                        cls.showInfo(nextRecord[0], record.event)
+                        cls.showInfo(nextRecordList[0], record.event)
 
                 if cls.recordQueue.empty():
                     return

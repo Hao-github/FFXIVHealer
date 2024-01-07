@@ -21,20 +21,22 @@ class Timer:
 
 
 class MagicMtg(BaseStatus):
-    def __init__(self, name: str, duration: float, value: float) -> None:
-        super().__init__(name, duration, value)
+    pass
 
 
 class PhysicsMtg(BaseStatus):
-    def __init__(self, name: str, duration: float, value: float) -> None:
-        super().__init__(name, duration, value)
-
+    pass
 
 class Mtg(MagicMtg, PhysicsMtg):
-    #     """Mitigation 减伤"""
-    def __init__(self, name: str, duration: float, value: float) -> None:
-        super().__init__(name, duration, value)
+    """Mitigation 减伤"""
+    pass
 
+class HealBonus(BaseStatus):
+    pass
+
+
+class SpellBonus(BaseStatus):
+    pass
 
 class Shield(BaseStatus):
     def __init__(self, name: str, duration: float, value: float) -> None:
@@ -43,21 +45,8 @@ class Shield(BaseStatus):
 
 
 class maxHpShield(BaseStatus):
-    def __init__(self, name: str, duration: float, value: float) -> None:
-        super().__init__(name, duration, value)
-
     def toShield(self, maxHp: int) -> Shield:
         return Shield(self.name, self.duration, maxHp * self.value // 100)
-
-
-class HealBonus(BaseStatus):
-    def __init__(self, name: str, duration: float, value: float) -> None:
-        super().__init__(name, duration, value)
-
-
-class SpellBonus(BaseStatus):
-    def __init__(self, name: str, duration: float, value: float) -> None:
-        super().__init__(name, duration, value)
 
 
 class Dot(BaseStatus):
@@ -110,9 +99,6 @@ class DelayHeal(BaseStatus):
 
 
 class IncreaseMaxHp(HealBonus):
-    def __init__(self, name: str, duration: float, value: float) -> None:
-        super().__init__(name, duration, value)
-
     def update(self, timeInterval: float, **kwargs) -> Event | None:
         super().update(timeInterval)
         if self.remainTime <= 0:
