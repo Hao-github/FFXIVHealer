@@ -1,10 +1,51 @@
 """
 模拟buff和debuff的模型的文件
 """
+from __future__ import annotations
 from random import random
 
-from models.baseStatus import BaseStatus, StatusRtn
 from Settings.baseConfig import EventType
+
+
+class StatusRtn:
+    def __init__(self, eventType: EventType, name: str, value: float) -> None:
+        self.eventType: EventType = eventType
+        self.name: str = name
+        self.value: float = value
+
+
+class BaseStatus:
+    conflict = ["Galavinze", "EkurasianPrognosis", "EkurasianDignosis"]
+
+    def __init__(self, name: str, duration: float, value: float = 0) -> None:
+        self.name: str = name
+        self.duration: float = duration
+        self.remainTime: float = duration
+        self.value: float = value
+        self.getSnapshot: bool = False
+
+    def update(self, timeInterval: float, **kwargs) -> StatusRtn | None:
+        self.remainTime -= timeInterval
+
+    def __str__(self) -> str:
+        return "{0}: {1}s".format(self.name, str(round(self.remainTime, 2)))
+
+    def __eq__(self, __value: BaseStatus) -> bool:
+        return (
+            type(self) == type(__value)
+            and self.name == __value.name
+            and self.value == __value.value
+        )
+
+    def __lt__(self, __value: object) -> bool:
+        if not isinstance(__value, BaseStatus) or type(self) != type(__value):
+            return False
+        return self.value < __value.value
+
+    def getBuff(self, percentage: float) -> BaseStatus:
+        if self.getSnapshot:
+            self.value *= percentage
+        return self
 
 
 class Timer:

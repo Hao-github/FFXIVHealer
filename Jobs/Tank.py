@@ -1,6 +1,6 @@
 from functools import reduce
-from models.baseStatus import BaseStatus
 from models.status import (
+    BaseStatus,
     DelayHeal,
     IncreaseMaxHp,
     MagicMtg,

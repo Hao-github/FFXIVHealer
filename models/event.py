@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 from Settings.baseConfig import EventType
-from models.baseStatus import BaseStatus, StatusRtn
-from models.status import Dot
+from models.status import BaseStatus, StatusRtn, Dot
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

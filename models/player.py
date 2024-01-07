@@ -3,9 +3,9 @@ import traceback
 from Settings.baseConfig import EventType
 
 from models.record import Record
-from models.baseStatus import BaseStatus
 from models.event import Event
 from models.status import (
+    BaseStatus,
     HealBonus,
     Hot,
     IncreaseMaxHp,
@@ -87,15 +87,14 @@ class Player:
                     status.value -= damage
                     return 0
                 damage -= int(status.value)
-                status.setZero()  # TODO: haima盾逻辑不对
+                status.remainTime = 0  # TODO: haima盾逻辑不对
         return damage
 
     def __maxHpChange(self, hpChange: int) -> None:
+        self.maxHp += hpChange
         if hpChange > 0:
-            self.maxHp += hpChange
             self.hp += hpChange
         else:
-            self.maxHp -= hpChange
             self.hp = max(self.maxHp, self.hp)
 
     def getStatus(self, status: BaseStatus) -> None:
@@ -125,7 +124,7 @@ class Player:
             self.removeStatus(BaseStatus.conflict[1])
         if status.name != BaseStatus.conflict[2]:
             if self.searchStatus(BaseStatus.conflict[2]):
-                status.setZero()
+                status.remainTime = 0
 
     def dealWithPepsis(self, event: Event) -> Event:
         if self.removeStatus("EkurasianDignosis"):
@@ -134,7 +133,7 @@ class Player:
             event.getBuff(0)
         return event
 
-    def dealWithReadyEvent(self, event: Event) -> None:
+    def dealWithReadyEvent(self, event: Event) -> Event | None:
         if not self.isSurvival:
             return
         map(lambda status: self.getStatus(status), event.statusList)

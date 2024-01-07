@@ -23,10 +23,10 @@ class Fight:
         time: float = 0
         while True:
             # 检查buff, 如果dot和hot跳了, 或者延迟治疗时间到了, 就产生立即的prepare事件
-            # if dotAndHotList := reduce(
-            #     lambda x, y: x + y.update(step), cls.playerList.values(), []
-            # ):
-            #     cls.recordQueue.push(time, Record(dotAndHotList))
+            if dotAndHotList := reduce(
+                lambda x, y: x + y.update(step), cls.playerList.values(), []
+            ):
+                cls.recordQueue.push(time, Record(dotAndHotList))
             # 如果当前时间大于等于最近的事件的发生时间
             while time >= cls.recordQueue.nextRecordTime:
                 record = cls.recordQueue.pop()
@@ -34,9 +34,8 @@ class Fight:
                     cls.recordQueue.push(time + record.delay, cls.forUnprepared(record))
                 else:
                     for event in record.eventList:
-                        event.target.dealWithReadyEvent(event)
-                    #     if a := event.target.dealWithReadyEvent(event):
-                    #         cls.recordQueue.push(time, a) TODO: 铃铛
+                        if a := event.target.dealWithReadyEvent(event):
+                            cls.recordQueue.push(time, Record(a))
 
                     cls.showInfo(time, record.eventList[0])
 
@@ -68,21 +67,15 @@ class Fight:
         print("After Event {0} At {1}".format(event.name, time))
         for name, player in cls.playerList.items():
             print(
-                "{0}{1:<13}: {2:>6}, statusList: [{3}]".format(
+                "{0}-{1:<13}: {2:>6}, statusList: [{3}]".format(
                     name,
-                    "(" + player.name + ")",
+                    player.name,
                     str(player.hp),
-                    reduce(
-                        lambda x, y: x
-                        + (
-                            str(y) + ", "
-                            if y.name
-                            not in ["naturalHeal", "magicDefense", "physicsDefense"]
-                            and y.remainTime > 0
-                            else ""
-                        ),
-                        player.statusList,
-                        "",
+                    ", ".join(
+                        str(i)
+                        for i in player.statusList
+                        if i.name
+                        not in ["naturalHeal", "magicDefense", "physicsDefense"]
                     ),
                 ),
             )

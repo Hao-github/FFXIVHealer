@@ -1,7 +1,7 @@
 from functools import reduce
 from Settings.baseConfig import EventType
-from models.baseStatus import BaseStatus
 from models.status import (
+    BaseStatus,
     DelayHeal,
     HaimaShield,
     HealBonus,
