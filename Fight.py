@@ -2,9 +2,10 @@ from copy import deepcopy
 from functools import reduce
 import pandas as pd
 from models.player import Player, allPlayer
-from models.event import Event, EventType
+from models.event import Event
 from models.record import RecordQueue, Record
 from models.status import Dot
+from Settings.jobToClass import jobToClass
 
 
 class Fight:
@@ -12,34 +13,9 @@ class Fight:
     recordQueue: RecordQueue = RecordQueue()
 
     @classmethod
-    def addPlayer(cls, name: str, player: Player) -> None:
-        cls.playerList[name] = player
-
-    @classmethod
-    def addBossSkills(cls, fileName: str, boss: Player) -> None:
-        def RowToRecord(row: pd.Series):
-            record = Record(
-                Event(
-                    EventType.MagicDamage
-                    if row["type"] == "magic"
-                    else EventType.PhysicsDamage,
-                    name=row["name"],
-                    value=row["damage"],
-                ),
-                user=boss,
-                target=allPlayer,
-                delay=row["delay"],
-            )
-            if row["hasDot"]:
-                record.event.append(
-                    Dot(record.event.name, row["dotTime"], row["dotDamage"])
-                )
-
-            m, s = row["prepareTime"].strip().split(":")
-            cls.recordQueue.push(int(m) * 60 + float(s), [record])
-            return row["prepareTime"]
-
-        pd.read_csv(fileName).apply(RowToRecord, axis=1)
+    def addbaseCofig(cls, bossFile: str, playerFile: str) -> None:
+        pd.read_csv(bossFile).apply(cls.__rowToRecord, axis=1)
+        pd.read_csv(playerFile).apply(cls.__rowToPlayer, axis=1)
 
     @classmethod
     def run(cls, step: float):
@@ -48,13 +24,14 @@ class Fight:
         time: float = 0
         while True:
             # 检查buff, 如果dot和hot跳了, 或者延迟治疗时间到了, 就产生立即的prepare事件
-            cls.recordQueue.push(
-                time,
-                reduce(lambda x, y: x + y.update(step), cls.playerList.values(), []),
-            )
+            if dotAndHotList := reduce(
+                lambda x, y: x + y.update(step), cls.playerList.values(), []
+            ):
+                cls.recordQueue.push(time, dotAndHotList)
             # 如果当前时间大于等于最近的事件的发生时间
             while time >= cls.recordQueue.nextRecordTime:
-                for record in cls.recordQueue.pop():
+                nextRecord = cls.recordQueue.pop()
+                for record in nextRecord[2]:
                     if not record.event.prepared:
                         cls.recordQueue.push(
                             time + record.delay, cls.__forUnpreparedRecord(record)
@@ -62,7 +39,7 @@ class Fight:
                     else:
                         if a := record.target.dealWithReadyEvent(record.event):
                             cls.recordQueue.push(time, a)
-                        cls.showInfo(record.event)
+                        cls.showInfo(nextRecord[0], record.event)
 
                 if cls.recordQueue.empty():
                     return
@@ -90,14 +67,53 @@ class Fight:
         )
 
     @classmethod
-    def showInfo(cls, event: Event):
+    def showInfo(cls, time: float, event: Event):
         if event.name == "naturalHeal":
             return
-        print("After Event " + event.name)
-        for player in cls.playerList.values():
-            print("状态列表: [", end="")
-            for status in player.statusList:
-                if status.name != "naturalHeal" and status.remainTime > 0:
-                    print(str(status) + ", ", end="")
-            print("]")
-            print(player.name + " : " + str(player.hp))
+        print("After Event {0} At {1}".format(event.name, time))
+        for name, player in cls.playerList.items():
+            print(
+                "{0}{1:<13}: {2:>6}, statusList: [{3}]".format(
+                    name,
+                    "(" + player.name + ")",
+                    str(player.hp),
+                    reduce(
+                        lambda x, y: x
+                        + (
+                            str(y) + ", "
+                            if y.name
+                            not in ["naturalHeal", "magicDefense", "physicsDefense"]
+                            and y.remainTime > 0
+                            else ""
+                        ),
+                        player.statusList,
+                        "",
+                    ),
+                ),
+            )
+
+    @classmethod
+    def __rowToPlayer(cls, row: pd.Series):
+        jobName = row["job"]
+        className = jobToClass[jobName]
+        jobClass = getattr(__import__("Jobs." + className), jobName)
+        cls.playerList[row["name"]] = jobClass(row["hp"], row["potency"])
+        return jobName
+
+    @classmethod
+    def __rowToRecord(cls, row: pd.Series):
+        boss = Player("boss", 0, 0, 0, 0)
+        record = Record(
+            Event.fromRow(row),
+            user=boss,
+            target=allPlayer
+            if row["target"] == "all"
+            else cls.playerList[row["target"]],
+            delay=row["delay"],
+        )
+        if row["hasDot"]:
+            record.event.append(Dot(row["name"], row["dotTime"], row["dotDamage"]))
+
+        m, s = row["prepareTime"].strip().split(":")
+        cls.recordQueue.push(int(m) * 60 + float(s), [record])
+        return row["prepareTime"]

@@ -1,26 +1,11 @@
-import traceback
-from models.baseStatus import BaseStatus
-from models.status import MagicMtg, PhysicsMtg
+from models.status import MagicMtg, Mtg, PhysicsMtg
 from models.player import allPlayer, Player
-from models.event import Event, EventType
 from models.record import Record
 
 
 class MeleeDPS(Player):
     def __init__(self, name: str, hp: int, potency: float) -> None:
         super().__init__(name, hp, potency, 0.78, 0.78)
-
-    def createRecord(
-        self,
-        target: Player,
-        value: float = 0,
-        status: list[BaseStatus] | BaseStatus = [],
-    ) -> Record:
-        return Record(
-            Event(EventType.Heal, traceback.extract_stack()[-2][2], value, status),
-            self,
-            target,
-        )
 
     def Feint(self) -> Record:
         return self.createRecord(
@@ -30,3 +15,24 @@ class MeleeDPS(Player):
 
     def SecondWind(self) -> Record:
         return self.createRecord(self, value=500)
+
+
+class Monk(MeleeDPS):
+    def __init__(self, hp: int, potency: float) -> None:
+        super().__init__("Monk", hp, potency)
+
+    def RiddleOfEarth(self) -> Record:
+        return self.createRecord(self, status=Mtg("RiddleOfEarth", 10, 0.8))
+
+
+class Dragoon(MeleeDPS):
+    def __init__(self, hp: int, potency: float) -> None:
+        super().__init__("Dragoon", hp, potency)
+
+
+class Samurai(MeleeDPS):
+    def __init__(self, hp: int, potency: float) -> None:
+        super().__init__("Samurai", hp, potency)
+
+    def ThirdEye(self) -> Record:
+        return self.createRecord(self, status=Mtg("ThirdEye", 4, 0.9))

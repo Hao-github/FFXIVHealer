@@ -1,27 +1,12 @@
-import traceback
-from models.baseStatus import BaseStatus
 from models.status import Mtg, HealBonus, Hot, maxHpShield
 from models.player import Player, allPlayer
 from models.record import Record
-from models.event import Event, EventType
 
 
 class PhysicsDPS(Player):
     def __init__(self, name: str, hp: int, potency: float) -> None:
         super().__init__(name, hp, potency, 0.78, 0.78)
-
-    def createRecord(
-        self,
-        target: Player,
-        value: float = 0,
-        status: list[BaseStatus] | BaseStatus = [],
-    ) -> Record:
-        return Record(
-            Event(EventType.Heal, traceback.extract_stack()[-2][2], value, status),
-            self,
-            target,
-        )
-
+        
     def Tactician(self) -> Record:
         return self.createRecord(allPlayer, status=Mtg("Tactician", 15, 0.9))
 

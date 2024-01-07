@@ -1,7 +1,5 @@
-import traceback
-from models.baseStatus import BaseStatus
 from models.status import HealBonus, Hot, MagicMtg, PhysicsMtg
-from models.event import Event, EventType, petSkill
+from models.event import petSkill
 from models.player import Player, allPlayer
 from models.record import Record
 
@@ -9,18 +7,6 @@ from models.record import Record
 class MagicDPS(Player):
     def __init__(self, name: str, hp: int, potency: float) -> None:
         super().__init__(name, hp, potency, 0.73, 0.84)
-
-    def createRecord(
-        self,
-        target: Player,
-        value: float = 0,
-        status: list[BaseStatus] | BaseStatus = [],
-    ) -> Record:
-        return Record(
-            Event(EventType.Heal, traceback.extract_stack()[-2][2], value, status),
-            self,
-            target,
-        )
 
     def Addle(self) -> Record:
         return self.createRecord(

@@ -1,0 +1,18 @@
+jobToClass = {
+    "DarkKnight": "Tank",
+    "Knight": "Tank",
+    "GunBreaker": "Tank",
+    "Warrior": "Tank",
+    "Dancer": "PhysicsDPS",
+    "Machinist": "PhysicsDPS",
+    "Bard": "PhysicsDPS",
+    "Monk": "MeleeDPS",
+    "Samurai": "MeleeDPS",
+    "Dragoon": "MeleeDPS",
+    "WhiteMage": "Healer",
+    "Scholar": "Healer",
+    "Sage": "Healer",
+    "RedMage": "MagicDPS",
+    "Summoner": "MagicDPS",
+    "BlackMage": "MagicDPS",
+}

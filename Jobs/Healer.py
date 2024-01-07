@@ -1,4 +1,4 @@
-import traceback
+from functools import reduce
 from models.baseStatus import BaseStatus
 from models.status import (
     DelayHeal,
@@ -28,51 +28,33 @@ class Healer(Player):
             event.getBuff(self.calPct(SpellBonus))
         return super().asEventUser(event, target)
 
-    def createRecord(
-        self,
-        target: Player,
-        value: float = 0,
-        status: list[BaseStatus] | BaseStatus = [],
-        delay: float = 0,
-    ) -> Record:
-        return Record(
-            Event(EventType.Heal, traceback.extract_stack()[-2][2], value, status),
-            self,
-            target,
-            delay,
-        )
-
 
 class Scholar(Healer):
-    Spell: list[str] = ["Adloquium", "Succor"]
-
-    def __init__(self, hp: int, potency: float, critNum: float) -> None:
-        super().__init__("Scholar", hp, potency, self.Spell + ["Physics"])
+    def __init__(self, hp: int, potency: float) -> None:
+        super().__init__("Scholar", hp, potency, ["Adloquium", "Succor", "Physics"])
         self.petCoefficient: float = 0.95
-        self.critNum: float = critNum
+        self.critNum: float = 1.6
 
     def asEventUser(self, event: Event, target: Player) -> tuple[Event, Player]:
-        if event.name == "Deployment":
-            if status := target.removeStatus("Galvanize"):
-                ret = Event(EventType.Heal, "Deployment", status=status)
-                return super().asEventUser(ret, allPlayer)
-        elif event.name == "Adloquium" and self.removeStatus("Recitation"):
-            event.append(Shield("Catalyze", 30, 540))
-            event.getBuff(self.critNum)
-        elif event.name in [
-            "Succor",
-            "Indomitability",
-            "Excogitation",
-        ] and self.removeStatus("Recitation"):
-            event.getBuff(self.critNum)
-        elif event.name in self.Spell and self.removeStatus("EmergencyTactics"):
-            for e in event.statusList:
-                event.value += e.value
-            event.statusList.clear()
+        # if event.name == "Deployment":
+        #     if status := target.removeStatus("Galvanize"):
+        #         ret = Event(EventType.Heal, "Deployment", status=status)
+        #         return super().asEventUser(ret, allPlayer)
+        event = self.__dealWithRct(event)
+        event = self.__dealWithET(event)
         return super().asEventUser(event, target)
 
     def Recitation(self) -> Record:
         return self.createRecord(self, status=BaseStatus("Recitation", 15))
+
+    def __dealWithRct(self, e: Event) -> Event:
+        if e.name not in ["Adloquium", "Succor", "Indomitability", "Excogitation"]:
+            return e
+        if not self.removeStatus("Recitation"):
+            return e
+        if e.name == "Adloquium":
+            e.append(Shield("Catalyze", 30, 540))
+        return e.getBuff(self.critNum)
 
     def Dissipation(self) -> Record:
         return self.createRecord(self, status=SpellBonus("Dissipation", 30, 1.2))
@@ -82,6 +64,12 @@ class Scholar(Healer):
 
     def EmergencyTactics(self) -> Record:
         return self.createRecord(self, status=BaseStatus("EmergencyTactics", 15))
+
+    def __dealWithET(self, e: Event) -> Event:
+        if e.name in ["Adloquium", "Succor"] and self.removeStatus("EmergencyTactics"):
+            e.value = reduce(lambda x, y: x + y.value, e.statusList, e.value)
+            e.statusList.clear()
+        return e
 
     # 单奶
 
@@ -176,7 +164,7 @@ class WhiteMage(Healer):
         """全大赦"""
         return self.createRecord(self, status=BaseStatus("PlenaryIndulgence", 10))
 
-    def update(self, timeInterval: float) -> list[Event]:
+    def update(self, timeInterval: float) -> list[Record]:
         self.bellCD -= timeInterval
         return super().update(timeInterval)
 
@@ -262,108 +250,6 @@ class WhiteMage(Healer):
         return self.createRecord(self)
 
 
-class Astrologian(Healer):
-    aoeSpell: list[str] = ["AspectedHelios", "Helios"]
-    singleSpell: list[str] = ["Benefic", "BeneficII", "AspectedBenefic"]
-
-    def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("Astrologian", hp, potency, self.aoeSpell + self.singleSpell)
-        self.SynastryTarget: Player = self
-
-    def asEventUser(self, event: Event, target: Player) -> tuple[Event, Player]:
-        # if event.name == "Synastry":
-        #     self.SynastryTarget = target
-        if event.name in self.aoeSpell:
-            if self.searchStatus("NeutralSect"):
-                if event.name == "AspectedHelios":
-                    event.append(Shield("AspectedHeliosShield", 30, 312.5))
-                else:
-                    event.append(Shield("AspectedBeneficShield", 30, 625))
-        #     if self.searchStatus("Horoscope", remove=True):
-        #         self.getStatus(BaseStatus("HugeMoroscope", 30, 400))
-        # elif event.name == "closeHoroscope":
-        #     self.__setStatusZero("Horoscope")
-        # elif event.name == "Horoscope" and event.eventType == EventType.TrueHeal:
-        #     # 表示天宫图时间归0, 将天宫图事件转为群奶
-        #     event.value *= self.potency
-        #     target = allPlayer
-        return super().asEventUser(event, target)
-
-    # def dealWithReadyEvent(self, event: Event) -> Record | None:
-    #     super().dealWithReadyEvent(event)
-    #     if event.name not in self.singleSpell:
-    #         return
-    #     if self.searchStatus("Synastry") and self.SynastryTarget != self:
-    #         return Record(
-    #             Event(EventType.TrueHeal, "SynastryHeal", event.value * 0.4),
-    #             self,
-    #             self.SynastryTarget,
-    #         )
-    # TODO: 暂时注释掉天宫图和星位和图的逻辑
-    # 单奶
-
-    # def Synastry(self, target: Player) -> Record:
-    #     return self.createRecord(target)
-
-    def Benefic(self, target: Player) -> Record:
-        return self.createRecord(target, value=500)
-
-    def BeneficII(self, target: Player) -> Record:
-        return self.createRecord(target, value=800)
-
-    def AspectedBenefic(self, target: Player) -> Record:
-        return self.createRecord(
-            target, value=250, status=Hot("AspectedBenefic", 15, 250)
-        )
-
-    def CelestialIntersection(self, target: Player) -> Record:
-        return self.createRecord(
-            target, value=200, status=Shield("CelestialIntersection", 30, 400)
-        )
-
-    def Exaltation(self, target: Player) -> Record:
-        return self.createRecord(
-            target,
-            status=[Mtg("Exaltation", 8, 0.9), DelayHeal("Exaltation", 8, 500)],
-        )
-
-    # 群奶
-
-    def Helios(self) -> Record:
-        return self.createRecord(allPlayer, value=400)
-
-    def AspectedHelios(self) -> Record:
-        return self.createRecord(
-            allPlayer, value=250, status=Hot("AspectedHelios", 15, 150)
-        )
-
-    def CollectiveUnconscious(self) -> Record:
-        return self.createRecord(
-            allPlayer, status=[Mtg("CU", 5, 0.9), Hot("CU", 15, 100)]
-        )
-
-    def CelestialOpposition(self) -> Record:
-        return self.createRecord(allPlayer, value=200, status=Hot("CO", 15, 100))
-
-    def EarthlyStar(self) -> Record:
-        return self.createRecord(allPlayer, value=720)
-
-    def NeutralSect(self) -> Record:
-        return self.createRecord(self, status=HealBonus("NeutralSect", 20, 1.2))
-
-    def Horoscope(self) -> Record:
-        return self.createRecord(self, status=BaseStatus("Horoscope", 10, 200))
-
-    # def closeHoroscope(self) -> Record:
-    #     return self.createRecord(self)
-
-    def Macrocosmos(self) -> Record:
-        return self.createRecord(allPlayer, status=DelayHeal("Macrocosmos", 15, 200))
-
-    def Microcosmos(self) -> Record:
-        return self.createRecord(allPlayer)
-
-
 class Sage(Healer):
     def __init__(self, hp: int, potency: float) -> None:
         super().__init__(
@@ -445,3 +331,103 @@ class Sage(Healer):
 
     def Pepsis(self) -> Record:
         return self.createRecord(allPlayer, 350)
+
+
+# class Astrologian(Healer):
+#     aoeSpell: list[str] = ["AspectedHelios", "Helios"]
+#     singleSpell: list[str] = ["Benefic", "BeneficII", "AspectedBenefic"]
+
+#     def __init__(self, hp: int, potency: float) -> None:
+#         super().__init__("Astrologian", hp, potency, self.aoeSpell + self.singleSpell)
+#         self.SynastryTarget: Player = self
+
+#     def asEventUser(self, event: Event, target: Player) -> tuple[Event, Player]:
+#         # if event.name == "Synastry":
+#         #     self.SynastryTarget = target
+#         if event.name in self.aoeSpell:
+#             if self.searchStatus("NeutralSect"):
+#                 if event.name == "AspectedHelios":
+#                     event.append(Shield("AspectedHeliosShield", 30, 312.5))
+#                 else:
+#                     event.append(Shield("AspectedBeneficShield", 30, 625))
+#         #     if self.searchStatus("Horoscope", remove=True):
+#         #         self.getStatus(BaseStatus("HugeMoroscope", 30, 400))
+#         # elif event.name == "closeHoroscope":
+#         #     self.__setStatusZero("Horoscope")
+#         # elif event.name == "Horoscope" and event.eventType == EventType.TrueHeal:
+#         #     # 表示天宫图时间归0, 将天宫图事件转为群奶
+#         #     event.value *= self.potency
+#         #     target = allPlayer
+#         return super().asEventUser(event, target)
+
+#     # def dealWithReadyEvent(self, event: Event) -> Record | None:
+#     #     super().dealWithReadyEvent(event)
+#     #     if event.name not in self.singleSpell:
+#     #         return
+#     #     if self.searchStatus("Synastry") and self.SynastryTarget != self:
+#     #         return Record(
+#     #             Event(EventType.TrueHeal, "SynastryHeal", event.value * 0.4),
+#     #             self,
+#     #             self.SynastryTarget,
+#     #         )
+
+#     # def Synastry(self, target: Player) -> Record:
+#     #     return self.createRecord(target)
+
+#     def Benefic(self, target: Player) -> Record:
+#         return self.createRecord(target, value=500)
+
+#     def BeneficII(self, target: Player) -> Record:
+#         return self.createRecord(target, value=800)
+
+#     def AspectedBenefic(self, target: Player) -> Record:
+#         return self.createRecord(
+#             target, value=250, status=Hot("AspectedBenefic", 15, 250)
+#         )
+
+#     def CelestialIntersection(self, target: Player) -> Record:
+#         return self.createRecord(
+#             target, value=200, status=Shield("CelestialIntersection", 30, 400)
+#         )
+
+#     def Exaltation(self, target: Player) -> Record:
+#         return self.createRecord(
+#             target,
+#             status=[Mtg("Exaltation", 8, 0.9), DelayHeal("Exaltation", 8, 500)],
+#         )
+
+#     # 群奶
+
+#     def Helios(self) -> Record:
+#         return self.createRecord(allPlayer, value=400)
+
+#     def AspectedHelios(self) -> Record:
+#         return self.createRecord(
+#             allPlayer, value=250, status=Hot("AspectedHelios", 15, 150)
+#         )
+
+#     def CollectiveUnconscious(self) -> Record:
+#         return self.createRecord(
+#             allPlayer, status=[Mtg("CU", 5, 0.9), Hot("CU", 15, 100)]
+#         )
+
+#     def CelestialOpposition(self) -> Record:
+#         return self.createRecord(allPlayer, value=200, status=Hot("CO", 15, 100))
+
+#     def EarthlyStar(self) -> Record:
+#         return self.createRecord(allPlayer, value=720)
+
+#     def NeutralSect(self) -> Record:
+#         return self.createRecord(self, status=HealBonus("NeutralSect", 20, 1.2))
+
+#     def Horoscope(self) -> Record:
+#         return self.createRecord(self, status=BaseStatus("Horoscope", 10, 200))
+
+#     # def closeHoroscope(self) -> Record:
+#     #     return self.createRecord(self)
+
+#     def Macrocosmos(self) -> Record:
+#         return self.createRecord(allPlayer, status=DelayHeal("Macrocosmos", 15, 200))
+
+#     def Microcosmos(self) -> Record:
+#         return self.createRecord(allPlayer)

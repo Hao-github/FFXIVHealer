@@ -1,5 +1,4 @@
 from functools import reduce
-import traceback
 from models.baseStatus import BaseStatus
 from models.status import (
     DelayHeal,
@@ -10,7 +9,7 @@ from models.status import (
     Hot,
     maxHpShield,
 )
-from models.event import Event, EventType
+from models.event import Event
 from models.player import Player, allPlayer
 from models.record import Record
 
@@ -18,18 +17,6 @@ from models.record import Record
 class Tank(Player):
     def __init__(self, name: str, hp: int, potency: float) -> None:
         super().__init__(name, hp, potency, 0.48, 0.48)
-
-    def createRecord(
-        self,
-        target: Player,
-        value: float = 0,
-        status: list[BaseStatus] | BaseStatus = [],
-    ) -> Record:
-        return Record(
-            Event(EventType.Heal, traceback.extract_stack()[-2][2], value, status),
-            self,
-            target,
-        )
 
     def Reprisal(self) -> Record:
         return self.createRecord(self, status=Mtg("Reprisal", 10, 0.9))

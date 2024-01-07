@@ -46,6 +46,9 @@ class maxHpShield(BaseStatus):
     def __init__(self, name: str, duration: float, value: float) -> None:
         super().__init__(name, duration, value)
 
+    def toShield(self, maxHp: int) -> Shield:
+        return Shield(self.name, self.duration, maxHp * self.value // 100)
+
 
 class HealBonus(BaseStatus):
     def __init__(self, name: str, duration: float, value: float) -> None:
@@ -80,15 +83,16 @@ class Hot(BaseStatus):
     ) -> None:
         super().__init__(name, duration, value)
         self.timer: Timer = Timer(interval)
-        self.getSnapshot: bool = True
-        self.isGround: bool = isGround
+        self.getSnapshot: bool = not isGround
 
     def update(self, timeInterval: float, **kwargs) -> Event | None:
         super().update(timeInterval)
         if self.timer.update(timeInterval):
-            if self.isGround:
-                return Event(EventType.GroundHeal, self.name, self.value)
-            return Event(EventType.TrueHeal, self.name, self.value)
+            return Event(
+                EventType.TrueHeal if self.getSnapshot else EventType.GroundHeal,
+                self.name,
+                self.value,
+            )
 
 
 class DelayHeal(BaseStatus):
@@ -100,7 +104,8 @@ class DelayHeal(BaseStatus):
 
     def update(self, timeInterval: float, hpPercentage: float) -> Event | None:
         super().update(timeInterval)
-        if self.remainTime <= 0 or hpPercentage < self.trigger: # TODO: 会持续触发治疗
+        if self.remainTime <= 0 or hpPercentage < self.trigger:
+            self.remainTime = 0
             return Event(EventType.TrueHeal, self.name, self.value)
 
 
@@ -125,21 +130,20 @@ class HaimaShield(Shield):
         self.originValue *= percentage
         return super().getBuff(percentage)
 
-    def update(self, timeInterval: float, **kwargs) -> Event | None:
-        super().update(timeInterval)
-        self.stackTime -= timeInterval
-        # 检测到海马时间已过
-        if self.stackTime <= 0:
-            ret = Event(
-                EventType.TrueHeal,
-                self.name,
-                self.originValue * self.stack / 2,
-                status=Shield(self.name, self.remainTime, self.value),
-            )
-            self.setZero()
-            return ret
-        # 检测到海马盾已破
-        if self.value <= 0 and self.stack > 0:
-            self.stack -= 1
-            self.remainTime = self.duration
-            self.value = self.originValue
+    # def update(self, timeInterval: float, **kwargs) -> Event | None:
+    #     super().update(timeInterval)
+    #     self.stackTime -= timeInterval
+    #     # 检测到海马时间已过
+    #     if self.stackTime <= 0:
+    #         ret = Event(
+    #             EventType.TrueHeal,
+    #             self.name,
+    #             self.originValue * self.stack / 2,
+    #             status=Shield(self.name, self.remainTime, self.value),
+    #         )
+    #         return ret
+    #     # 检测到海马盾已破
+    #     if self.value <= 0 and self.stack > 0:
+    #         self.stack -= 1
+    #         self.remainTime = self.duration
+    #         self.value = self.originValue

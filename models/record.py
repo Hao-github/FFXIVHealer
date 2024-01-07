@@ -1,6 +1,9 @@
 import heapq
-from models.player import Player
 from models.event import Event
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from models.player import Player
 
 
 class Record:
@@ -10,7 +13,7 @@ class Record:
     """
 
     def __init__(
-        self, event: Event, user: Player, target: Player, delay: float = 0
+        self, event: Event, user: "Player", target: "Player", delay: float = 0
     ) -> None:
         self.user: Player = user
         self.target: Player = target
@@ -29,11 +32,11 @@ class RecordQueue(object):
         self._index = 0
 
     def push(self, time: float, record: list[Record]):
-        heapq.heappush(self._queue, (-time, self._index, record))
+        heapq.heappush(self._queue, (time, self._index, record))
         self._index += 1
 
-    def pop(self) -> list[Record]:
-        return heapq.heappop(self._queue)[2]
+    def pop(self) -> tuple[float, int, list[Record]]:
+        return heapq.heappop(self._queue)
 
     @property
     def nextRecordTime(self) -> float:
