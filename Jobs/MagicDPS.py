@@ -9,7 +9,7 @@ class MagicDPS(Player):
         super().__init__(name, hp, potency, 0.73, 0.84)
 
     def Addle(self) -> Record:
-        return self.createRecord(
+        return self.buildRecord(
             allPlayer,
             status=[MagicMtg("Addle", 10, 0.9), PhysicsMtg("Addle", 10, 0.95)],
         )
@@ -20,7 +20,7 @@ class RedMage(MagicDPS):
         super().__init__("RedMage", hp, potency)
 
     def MagickBarrier(self) -> Record:
-        return self.createRecord(
+        return self.buildRecord(
             allPlayer,
             status=[
                 MagicMtg("MagickBarrier", 10, 0.9),
@@ -29,7 +29,7 @@ class RedMage(MagicDPS):
         )
 
     def Vercure(self, target: Player) -> Record:
-        return self.createRecord(target, value=500)
+        return self.buildRecord(target, value=500)
 
 
 class Summoner(MagicDPS):
@@ -39,8 +39,8 @@ class Summoner(MagicDPS):
 
     @petSkill
     def EverlastingFlight(self) -> Record:
-        return self.createRecord(allPlayer, status=Hot("EverLastingFlight", 21, 100))
+        return self.buildRecord(allPlayer, status=Hot("EverLastingFlight", 21, 100))
 
     @petSkill
     def Rekindle(self, target: Player) -> Record:
-        return self.createRecord(target, value=400)
+        return self.buildRecord(target, value=400)

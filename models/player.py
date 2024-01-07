@@ -1,10 +1,11 @@
 from __future__ import annotations
 import traceback
+from Settings.baseConfig import EventType
 
 from models.record import Record
-from .baseStatus import BaseStatus
-from models.event import Event, EventType
-from .status import (
+from models.baseStatus import BaseStatus
+from models.event import Event
+from models.status import (
     HealBonus,
     Hot,
     IncreaseMaxHp,
@@ -36,11 +37,11 @@ class Player:
         self.potency: float = potency
         self.isSurvival: bool = True
 
-    def asEventUser(self, event: Event, target: Player) -> tuple[Event, Player]:
+    def asEventUser(self, event: Event) -> Event:
         """作为事件的使用者, 如果是治疗事件, 计算自身身上的威力"""
-        if event.eventType == EventType.Heal:
-            event.getBuff(self.potency)
-        return event, target
+        return (
+            event.getBuff(self.potency) if event.eventType == EventType.Heal else event
+        )
 
     def asEventTarget(self, event: Event) -> Event:
         """作为事件的对象, 计算受疗或者减伤等"""
@@ -53,14 +54,14 @@ class Player:
         elif event.eventType in [EventType.Heal, EventType.GroundHeal]:
             # 从普通治疗或者地面治疗获得的治疗, 计算实时增益
             return event.getBuff(self.calPct(HealBonus))
-        elif event.eventType == EventType.MagicDamage:
+        elif event.eventType == EventType.MagicDmg:
             event.getBuff(self.calPct(MagicMtg))
-        elif event.eventType == EventType.PhysicsDamage:
+        elif event.eventType == EventType.PhysicsDmg:
             event.getBuff(self.calPct(PhysicsMtg))
         event.value = self.calDamageAfterShield(int(event.value))
         return event
 
-    def createRecord(
+    def buildRecord(
         self,
         target: Player,
         value: float = 0,
@@ -68,9 +69,14 @@ class Player:
         delay: float = 0,
     ) -> Record:
         return Record(
-            Event(EventType.Heal, traceback.extract_stack()[-2][2], value, status),
-            self,
-            target,
+            Event(
+                EventType.Heal,
+                traceback.extract_stack()[-2][2],
+                self,
+                target,
+                value,
+                status,
+            ),
             delay,
         )
 
@@ -143,14 +149,14 @@ class Player:
         self.hp -= int(event.value)
         self.isSurvival = self.hp > 0
 
-    def update(self, timeInterval: float) -> list[Record]:
+    def update(self, timeInterval: float) -> list[Event]:
         """更新所有的status, 如果status, 并返回所有status产生的event"""
         if not self.isSurvival:
             return []
-        ret: list[Record] = []
+        ret: list[Event] = []
         for status in self.statusList:
-            if event := status.update(timeInterval, hpPercentage=self.hp / self.maxHp):
-                ret.append(Record(event, self, self))
+            if s := status.update(timeInterval, hpPercentage=self.hp / self.maxHp):
+                ret.append(Event.fromStatusRtn(s, self, self))
 
         # 删除到时的buff
         self.statusList = [e for e in self.statusList if e.remainTime > 0]
@@ -177,3 +183,4 @@ class Player:
 
 
 allPlayer = Player("totalPlayer", 0, 0, 0, 0)
+boss = Player("boss", 0, 0, 0, 0)

@@ -1,18 +1,13 @@
 from __future__ import annotations
 
 import pandas as pd
-from models.baseStatus import BaseStatus
-from enum import Enum
+from Settings.baseConfig import EventType
+from models.baseStatus import BaseStatus, StatusRtn
+from models.status import Dot
+from typing import TYPE_CHECKING
 
-
-class EventType(Enum):
-    TrueHeal = 0  # 快照后的治疗
-    Heal = 1  # 普通治疗
-    GroundHeal = 2  # 特殊治疗, 吃施法者快照但目标身上实时判定
-    PhysicsDamage = 3  # 物理伤害
-    MagicDamage = 4  # 魔法伤害
-    TrueDamage = 5  # dot伤害
-    MaxHpChange = 6  # 关于最大生命值的变动事件
+if TYPE_CHECKING:
+    from models.player import Player
 
 
 class Event:
@@ -20,46 +15,51 @@ class Event:
         self,
         eventType: EventType,
         name: str,
+        user: "Player",
+        target: "Player",
         value: float = 0,
         status: list[BaseStatus] | BaseStatus = [],
     ) -> None:
         self.name: str = name
         self.eventType: EventType = eventType
         self.value: float = value
-        self.statusList: list[BaseStatus] = []
-        if isinstance(status, list):
-            self.statusList.extend(status)
-        else:
-            self.append(status)
-        self.prepared: bool = False
+        self.statusList: list[BaseStatus] = (
+            status if isinstance(status, list) else [status]
+        )
+        self.user: Player = user
+        self.target: Player = target
 
     def getBuff(self, percentage: float) -> Event:
         self.value *= percentage
-        self.statusList = [status.getBuff(percentage) for status in self.statusList]
+        map(lambda x: x.getBuff(percentage), self.statusList)
         return self
 
     def __str__(self) -> str:
         return "{0}: {1}, EventType: {2}".format(
             self.name,
             str(self.value),
-            ("magic" if self.eventType == EventType.MagicDamage else "physics"),
+            ("magic" if self.eventType == EventType.MagicDmg else "physics"),
         )
 
     def append(self, status: BaseStatus) -> None:
         self.statusList.append(status)
 
     @staticmethod
-    def fromRow(row: pd.Series) -> Event:
+    def fromRow(row: pd.Series, user: "Player", target: "Player") -> Event:
         return Event(
-            EventType.MagicDamage
-            if row["type"] == "magic"
-            else EventType.PhysicsDamage,
+            EventType.MagicDmg if row["type"] == "magic" else EventType.PhysicsDmg,
             name=row["name"],
             value=row["damage"],
-            # status=Dot(row["name"], row["dotTime"], row["dotDamage"])
-            # if row["hasDot"]
-            # else [],
+            user=user,
+            target=target,
+            status=Dot(row["name"], row["dotTime"], row["dotDamage"])
+            if row["hasDot"]
+            else [],
         )
+
+    @staticmethod
+    def fromStatusRtn(s: StatusRtn, user: "Player", target: "Player") -> Event:
+        return Event(s.eventType, s.name, user, target, s.value)
 
 
 def petSkill(func):

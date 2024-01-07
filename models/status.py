@@ -3,8 +3,8 @@
 """
 from random import random
 
-from models.baseStatus import BaseStatus
-from models.event import Event, EventType
+from models.baseStatus import BaseStatus, StatusRtn
+from Settings.baseConfig import EventType
 
 
 class Timer:
@@ -27,9 +27,12 @@ class MagicMtg(BaseStatus):
 class PhysicsMtg(BaseStatus):
     pass
 
+
 class Mtg(MagicMtg, PhysicsMtg):
     """Mitigation 减伤"""
+
     pass
+
 
 class HealBonus(BaseStatus):
     pass
@@ -37,6 +40,7 @@ class HealBonus(BaseStatus):
 
 class SpellBonus(BaseStatus):
     pass
+
 
 class Shield(BaseStatus):
     def __init__(self, name: str, duration: float, value: float) -> None:
@@ -55,10 +59,10 @@ class Dot(BaseStatus):
         self.timer: Timer = Timer(3)
         self.getSnapshot = True
 
-    def update(self, timeInterval: float, **kwargs) -> Event | None:
+    def update(self, timeInterval: float, **kwargs) -> StatusRtn | None:
         super().update(timeInterval)
         if self.timer.update(timeInterval):
-            return Event(EventType.TrueDamage, self.name, self.value)
+            return StatusRtn(EventType.TrueDamage, self.name, self.value)
 
 
 class Hot(BaseStatus):
@@ -74,10 +78,10 @@ class Hot(BaseStatus):
         self.timer: Timer = Timer(interval)
         self.getSnapshot: bool = not isGround
 
-    def update(self, timeInterval: float, **kwargs) -> Event | None:
+    def update(self, timeInterval: float, **kwargs) -> StatusRtn | None:
         super().update(timeInterval)
         if self.timer.update(timeInterval):
-            return Event(
+            return StatusRtn(
                 EventType.TrueHeal if self.getSnapshot else EventType.GroundHeal,
                 self.name,
                 self.value,
@@ -91,18 +95,18 @@ class DelayHeal(BaseStatus):
         super().__init__(name, duration, value)
         self.trigger: float = 0.5
 
-    def update(self, timeInterval: float, hpPercentage: float) -> Event | None:
+    def update(self, timeInterval: float, hpPercentage: float) -> StatusRtn | None:
         super().update(timeInterval)
         if self.remainTime <= 0 or hpPercentage < self.trigger:
             self.remainTime = 0
-            return Event(EventType.TrueHeal, self.name, self.value)
+            return StatusRtn(EventType.TrueHeal, self.name, self.value)
 
 
 class IncreaseMaxHp(HealBonus):
-    def update(self, timeInterval: float, **kwargs) -> Event | None:
+    def update(self, timeInterval: float, **kwargs) -> StatusRtn | None:
         super().update(timeInterval)
         if self.remainTime <= 0:
-            return Event(EventType.MaxHpChange, self.name, self.value)
+            return StatusRtn(EventType.MaxHpChange, self.name, self.value)
 
 
 class HaimaShield(Shield):

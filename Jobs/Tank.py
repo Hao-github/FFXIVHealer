@@ -19,40 +19,40 @@ class Tank(Player):
         super().__init__(name, hp, potency, 0.48, 0.48)
 
     def Reprisal(self) -> Record:
-        return self.createRecord(self, status=Mtg("Reprisal", 10, 0.9))
+        return self.buildRecord(self, status=Mtg("Reprisal", 10, 0.9))
 
     def Vengeance(self) -> Record:
-        return self.createRecord(self, status=Mtg("Vengeance", 15, 0.7))
+        return self.buildRecord(self, status=Mtg("Vengeance", 15, 0.7))
 
     def Rampart(self) -> Record:
-        return self.createRecord(self, status=Mtg("Rampart", 20, 0.8))
+        return self.buildRecord(self, status=Mtg("Rampart", 20, 0.8))
 
 
 class Paladin(Tank):
     def __init__(self, hp: int, potency: float) -> None:
         super().__init__("Paladin", hp, potency)
 
-    def asEventUser(self, event: Event, target: Player) -> tuple[Event, Player]:
+    def asEventUser(self, event: Event) -> Event:
         if event.name == "Intervention":
             if self.searchStatus("Rampart") or self.searchStatus("Vengeance"):
                 event.append(Mtg("Intervention", 8, 0.8))
             else:
                 event.append(Mtg("Intervention", 8, 0.9))
-        return super().asEventUser(event, target)
+        return super().asEventUser(event)
 
     def DivineVeil(self) -> Record:
-        return self.createRecord(
+        return self.buildRecord(
             allPlayer, 400, status=Shield("DivineVeil", 30, self.maxHp // 10)
         )
 
     def PassageOfArms(self) -> Record:
-        return self.createRecord(allPlayer, status=Mtg("PassageOfArms", 5, 0.85))
+        return self.buildRecord(allPlayer, status=Mtg("PassageOfArms", 5, 0.85))
 
     def Bulwark(self) -> Record:
-        return self.createRecord(self, status=Mtg("Bulwark", 10, 0.8))
+        return self.buildRecord(self, status=Mtg("Bulwark", 10, 0.8))
 
     def HolySheltron(self) -> Record:
-        return self.createRecord(
+        return self.buildRecord(
             self,
             status=[
                 Mtg("HolySheltron", 8, 0.85),
@@ -62,23 +62,23 @@ class Paladin(Tank):
         )
 
     def Intervention(self, target: Player) -> Record:
-        return self.createRecord(
+        return self.buildRecord(
             target,
             status=[Mtg("Knight'sResolve", 4, 0.9), Hot("Knight'sResolve", 12, 250)],
         )
 
     def HallowedGround(self) -> Record:
-        return self.createRecord(self, status=Shield("HallowedGround", 10, 1000000))
+        return self.buildRecord(self, status=Shield("HallowedGround", 10, 1000000))
 
 
 class Warrior(Tank):
     def __init__(self, hp: int, potency: float) -> None:
         super().__init__("Warrior", hp, potency)
 
-    def asEventUser(self, event: Event, target: Player) -> tuple[Event, Player]:
+    def asEventUser(self, event: Event) -> Event:
         if event.name == "ShakeItOff":
             event.append(maxHpShield("ShakeItOffShield", 30, self.__checkDefense()))
-        return super().asEventUser(event, target)
+        return super().asEventUser(event)
 
     def dealWithReadyEvent(self, event: Event) -> None:
         super().dealWithReadyEvent(event)
@@ -94,12 +94,12 @@ class Warrior(Tank):
         )
 
     def ShakeItOff(self) -> Record:
-        return self.createRecord(
+        return self.buildRecord(
             allPlayer, value=300, status=Hot("ShakeItOffHot", 15, 100)
         )
 
     def Bloodwhetting(self) -> Record:
-        return self.createRecord(
+        return self.buildRecord(
             self,
             status=[
                 Mtg("Bloodwhetting", 8, 0.9),
@@ -111,10 +111,10 @@ class Warrior(Tank):
 
     def NascentFlash(self, target: Player) -> list[Record]:
         return [
-            self.createRecord(
+            self.buildRecord(
                 self, status=Hot("NascentFlashHot", 7.5, 400, interval=2.5)
             ),
-            self.createRecord(
+            self.buildRecord(
                 target,
                 status=[
                     Mtg("NascentFlash", 8, 0.9),
@@ -126,37 +126,37 @@ class Warrior(Tank):
         ]
 
     def Equilibrium(self) -> Record:
-        return self.createRecord(self, value=1200, status=Hot("Equilibrium", 15, 200))
+        return self.buildRecord(self, value=1200, status=Hot("Equilibrium", 15, 200))
 
     def TrillOfBattle(self) -> Record:
-        return self.createRecord(self, status=IncreaseMaxHp("TrillOfBattle", 10, 1.2))
+        return self.buildRecord(self, status=IncreaseMaxHp("TrillOfBattle", 10, 1.2))
 
     def Holmgang(self) -> Record:
-        return self.createRecord(self, status=BaseStatus("Holmgang", 10))
+        return self.buildRecord(self, status=BaseStatus("Holmgang", 10))
 
 
 class GunBreaker(Tank):
     def __init__(self, hp: int, potency: float) -> None:
         super().__init__("GunBreaker", hp, potency)
 
-    def asEventUser(self, event: Event, target: Player) -> tuple[Event, Player]:
-        if event.name == "HeartOfCorundum" and target != self:
+    def asEventUser(self, event: Event) -> Event:
+        if event.name == "HeartOfCorundum" and event.target != self:
             event.append(Shield("Brutal", 30, 200))
         elif event.name == "Superbolide":
             self.hp = 1
-        return super().asEventUser(event, target)
+        return super().asEventUser(event)
 
     def HeartOfLight(self) -> Record:
-        return self.createRecord(allPlayer, status=MagicMtg("HeartOfLight", 15, 0.9))
+        return self.buildRecord(allPlayer, status=MagicMtg("HeartOfLight", 15, 0.9))
 
     def Aurora(self, target: Player) -> Record:
-        return self.createRecord(target, status=Hot("Aurora", 18, 200))
+        return self.buildRecord(target, status=Hot("Aurora", 18, 200))
 
     def Camouflage(self) -> Record:
-        return self.createRecord(self, status=Mtg("Camouflage", 20, 0.9))
+        return self.buildRecord(self, status=Mtg("Camouflage", 20, 0.9))
 
     def HeartOfCorundum(self, target: Player) -> Record:
-        return self.createRecord(
+        return self.buildRecord(
             target,
             status=[
                 Mtg("HeartOfCorundum", 8, 0.85),
@@ -166,7 +166,7 @@ class GunBreaker(Tank):
         )
 
     def Superbolide(self) -> Record:
-        return self.createRecord(self, status=Shield("Superbolide", 10, 1000000))
+        return self.buildRecord(self, status=Shield("Superbolide", 10, 1000000))
 
 
 class DarkKnight(Tank):
@@ -180,16 +180,16 @@ class DarkKnight(Tank):
             self.hp = 1
 
     def DarkMissionary(self) -> Record:
-        return self.createRecord(self, status=MagicMtg("DarkMissionary", 15, 0.9))
+        return self.buildRecord(self, status=MagicMtg("DarkMissionary", 15, 0.9))
 
     def DarkMind(self) -> Record:
-        return self.createRecord(self, status=MagicMtg("DarkMind", 10, 0.8))
+        return self.buildRecord(self, status=MagicMtg("DarkMind", 10, 0.8))
 
     def TheBlackestNight(self, target: Player) -> Record:
-        return self.createRecord(target, status=maxHpShield("TheBlackestNight", 7, 25))
+        return self.buildRecord(target, status=maxHpShield("TheBlackestNight", 7, 25))
 
     def Oblation(self, target: Player) -> Record:
-        return self.createRecord(target, status=Mtg("Oblation", 10, 0.9))
+        return self.buildRecord(target, status=Mtg("Oblation", 10, 0.9))
 
     def LivingDead(self) -> Record:
-        return self.createRecord(self, status=BaseStatus("LivingDead", 10))
+        return self.buildRecord(self, status=BaseStatus("LivingDead", 10))

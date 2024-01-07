@@ -1,4 +1,15 @@
 from __future__ import annotations
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from Settings.baseConfig import EventType
+
+
+class StatusRtn:
+    def __init__(self, eventType: EventType, name: str, value: float) -> None:
+        self.eventType: EventType = eventType
+        self.name: str = name
+        self.value: float = value
 
 
 class BaseStatus:
@@ -11,7 +22,7 @@ class BaseStatus:
         self.value: float = value
         self.getSnapshot: bool = False
 
-    def update(self, timeInterval: float, **kwargs) -> None:
+    def update(self, timeInterval: float, **kwargs) -> StatusRtn | None:
         self.remainTime -= timeInterval
 
     def __str__(self) -> str:
