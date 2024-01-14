@@ -83,7 +83,7 @@ class Fight:
     @classmethod
     def __rowToPlayer(cls, row: pd.Series):
         jobName = row["job"]
-        jobClass = getattr(__import__("Jobs." + jobToClass[jobName]), jobName)
+        jobClass = getattr(__import__("models.Jobs." + jobToClass[jobName]), jobName)
         cls.playerList[row["name"]] = jobClass(row["hp"], row["potency"])
         return jobName
 

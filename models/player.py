@@ -1,6 +1,6 @@
 from __future__ import annotations
 import traceback
-from Settings.baseConfig import EventType
+from models.status import EventType
 
 from models.record import Record
 from models.event import Event
@@ -30,10 +30,11 @@ class Player:
         self.maxHp: int = hp
         self.hp: int = hp
         self.statusList: list[BaseStatus] = [
-            Hot("naturalHeal", 10000, hp / 100, isGround=True),
+            Hot("naturalHeal", 10000, hp / 100, ground=True),
             MagicMtg("magicDefense", 10000, magicDefense),
             PhysicsMtg("physicsDefense", 10000, physicsDefense),
         ]
+        self.shieldList: list[Shield] = []
         self.potency: float = potency
         self.isSurvival: bool = True
 
@@ -63,21 +64,26 @@ class Player:
 
     def buildRecord(
         self,
-        target: Player,
+        selfTarget: bool = False,
         value: float = 0,
         status: list[BaseStatus] | BaseStatus = [],
         delay: float = 0,
     ) -> Record:
-        return Record(
-            Event(
-                EventType.Heal,
-                traceback.extract_stack()[-2][2],
-                self,
-                target,
-                value,
-                status,
-            ),
-            delay,
+        return Record(self.buildEvent(selfTarget, value, status), delay)
+
+    def buildEvent(
+        self,
+        selfTarget: bool = False,
+        value: float = 0,
+        status: list[BaseStatus] | BaseStatus = [],
+    ):
+        return Event(
+            EventType.Heal,
+            traceback.extract_stack()[-2][2],
+            self,
+            self if selfTarget else allPlayer,
+            value,
+            status,
         )
 
     def calDamageAfterShield(self, damage: int) -> int:
@@ -107,31 +113,22 @@ class Player:
             status.value = int(self.maxHp * status.value)
             self.__maxHpChange(status.value)
 
-        # 如果状态列表里已经有盾且新盾小于旧盾值,则不刷新
-        if oldStatus := self.removeStatus(status.name):
-            if isinstance(status, Shield) and status < oldStatus:
-                status = oldStatus
+        for s in self.statusList:
+            if s == status:
+                s = status if (not isinstance(status, Shield) or status > s) else s
+                return
 
         # 贤学群盾互顶
-        if status.name in BaseStatus.conflict:
-            self.dealWithH2Shield(status)
+        conflict = ["Galavinze", "EkurasianPrognosis", "EkurasianDignosis"]
+        if status not in conflict:
+            return self.statusList.append(status)
+        if status.name != conflict[0]:
+            self.removeStatus(conflict[0])
+        if status.name != conflict[1]:
+            self.removeStatus(conflict[1])
+        if status.name != conflict[2] and self.searchStatus(conflict[2]):
+            return
         self.statusList.append(status)
-
-    def dealWithH2Shield(self, status: BaseStatus):
-        if status.name != BaseStatus.conflict[0]:
-            self.removeStatus(BaseStatus.conflict[0])
-        if status.name != BaseStatus.conflict[1]:
-            self.removeStatus(BaseStatus.conflict[1])
-        if status.name != BaseStatus.conflict[2]:
-            if self.searchStatus(BaseStatus.conflict[2]):
-                status.remainTime = 0
-
-    def dealWithPepsis(self, event: Event) -> Event:
-        if self.removeStatus("EkurasianDignosis"):
-            event.getBuff(1.4)
-        elif not self.removeStatus("EkurasianPrognosis"):
-            event.getBuff(0)
-        return event
 
     def dealWithReadyEvent(self, event: Event) -> Event | None:
         if not self.isSurvival:
@@ -141,12 +138,20 @@ class Player:
         # 对于治疗事件
         if event.eventType.value < 3:
             if event.name == "Pepsis":
-                event = self.dealWithPepsis(event)
+                if self.removeStatus("EkurasianDignosis"):
+                    event.getBuff(1.4)
+                elif not self.removeStatus("EkurasianPrognosis"):
+                    event.getBuff(0)
             self.hp = min(self.maxHp, self.hp + int(event.value))
             return
 
         self.hp -= int(event.value)
-        self.isSurvival = self.hp > 0
+        if self.hp > 0:
+            return
+        if self.searchStatus("LivingDead") or self.searchStatus("Holmgang"):
+            self.hp = 1
+            return
+        self.isSurvival = False
 
     def update(self, timeInterval: float) -> list[Event]:
         """更新所有的status, 如果status, 并返回所有status产生的event"""
@@ -158,7 +163,7 @@ class Player:
                 ret.append(Event.fromStatusRtn(s, self, self))
 
         # 删除到时的buff
-        self.statusList = [e for e in self.statusList if e.remainTime > 0]
+        self.statusList = list(filter(lambda x: x.remainTime > 0, self.statusList))
         return ret
 
     def calPct(self, myType: type) -> float:

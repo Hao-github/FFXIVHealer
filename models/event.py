@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
-from Settings.baseConfig import EventType
-from models.status import BaseStatus, StatusRtn, Dot
+from models.status import BaseStatus, EventType, StatusRtn, Dot
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -59,12 +58,3 @@ class Event:
     @staticmethod
     def fromStatusRtn(s: StatusRtn, user: "Player", target: "Player") -> Event:
         return Event(s.eventType, s.name, user, target, s.value)
-
-
-def petSkill(func):
-    def wrapper(self, *args, **kwargs):
-        ret: Event = func(self, *args, **kwargs)
-        ret.getBuff(self.petCoefficient)
-        return ret
-
-    return wrapper

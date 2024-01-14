@@ -2,9 +2,18 @@
 模拟buff和debuff的模型的文件
 """
 from __future__ import annotations
+from enum import Enum
 from random import random
 
-from Settings.baseConfig import EventType
+
+class EventType(Enum):
+    TrueHeal = 0  # 快照后的治疗
+    Heal = 1  # 普通治疗
+    GroundHeal = 2  # 特殊治疗, 吃施法者快照但目标身上实时判定
+    PhysicsDmg = 3  # 物理伤害
+    MagicDmg = 4  # 魔法伤害
+    TrueDamage = 5  # dot伤害
+    MaxHpChange = 6  # 关于最大生命值的变动事件
 
 
 class StatusRtn:
@@ -15,8 +24,6 @@ class StatusRtn:
 
 
 class BaseStatus:
-    conflict = ["Galavinze", "EkurasianPrognosis", "EkurasianDignosis"]
-
     def __init__(self, name: str, duration: float, value: float = 0) -> None:
         self.name: str = name
         self.duration: float = duration
@@ -31,15 +38,9 @@ class BaseStatus:
         return "{0}: {1}s".format(self.name, str(round(self.remainTime, 2)))
 
     def __eq__(self, __value: BaseStatus) -> bool:
-        return (
-            type(self) == type(__value)
-            and self.name == __value.name
-            and self.value == __value.value
-        )
+        return type(self) == type(__value) and self.name == __value.name
 
-    def __lt__(self, __value: object) -> bool:
-        if not isinstance(__value, BaseStatus) or type(self) != type(__value):
-            return False
+    def __lt__(self, __value: BaseStatus) -> bool:
         return self.value < __value.value
 
     def getBuff(self, percentage: float) -> BaseStatus:
@@ -70,8 +71,6 @@ class PhysicsMtg(BaseStatus):
 
 
 class Mtg(MagicMtg, PhysicsMtg):
-    """Mitigation 减伤"""
-
     pass
 
 
@@ -113,11 +112,11 @@ class Hot(BaseStatus):
         duration: float,
         value: float,
         interval: float = 3,
-        isGround: bool = False,
+        ground: bool = False,
     ) -> None:
         super().__init__(name, duration, value)
         self.timer: Timer = Timer(interval)
-        self.getSnapshot: bool = not isGround
+        self.getSnapshot: bool = not ground
 
     def update(self, timeInterval: float, **kwargs) -> StatusRtn | None:
         super().update(timeInterval)

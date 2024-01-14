@@ -1,5 +1,6 @@
 from functools import reduce
-from Settings.baseConfig import EventType
+from models.status import EventType
+from models.decorator import petSkill, targetSkill
 from models.status import (
     BaseStatus,
     DelayHeal,
@@ -12,7 +13,7 @@ from models.status import (
     Mtg,
     Shield,
 )
-from models.event import Event, petSkill
+from models.event import Event
 from models.player import Player, allPlayer
 from models.record import Record
 
@@ -37,16 +38,16 @@ class Scholar(Healer):
         self.critNum: float = 1.6
 
     def asEventUser(self, event: Event) -> Event:
-        # if event.name == "Deployment":
-        #     if status := target.removeStatus("Galvanize"):
-        #         ret = Event(EventType.Heal, "Deployment", status=status)
-        #         return super().asEventUser(ret, allPlayer)
+        if event.name == "Deployment" and (s := event.target.removeStatus("Galvanize")):
+            event.target = allPlayer
+            event.statusList.append(s)
+            return super().asEventUser(event)
         event = self.__dealWithRct(event)
         event = self.__dealWithET(event)
         return super().asEventUser(event)
 
     def Recitation(self) -> Record:
-        return self.buildRecord(self, status=BaseStatus("Recitation", 15))
+        return self.buildRecord(True, status=BaseStatus("Recitation", 15))
 
     def __dealWithRct(self, e: Event) -> Event:
         if e.name not in ["Adloquium", "Succor", "Indomitability", "Excogitation"]:
@@ -57,14 +58,15 @@ class Scholar(Healer):
             e.append(Shield("Catalyze", 30, 540))
         return e.getBuff(self.critNum)
 
-    def Dissipation(self) -> Record:
-        return self.buildRecord(self, status=SpellBonus("Dissipation", 30, 1.2))
+    def Dissipation(self, **kwargs) -> Record:
+        return self.buildRecord(True, status=SpellBonus("Dissipation", 30, 1.2))
 
-    def Deployment(self, target: Player) -> Record:
-        return self.buildRecord(target)
+    @targetSkill
+    def Deployment(self, **kwargs) -> Record:
+        return self.buildRecord()
 
-    def EmergencyTactics(self) -> Record:
-        return self.buildRecord(self, status=BaseStatus("EmergencyTactics", 15))
+    def EmergencyTactics(self, **kwargs) -> Record:
+        return self.buildRecord(True, status=BaseStatus("EmergencyTactics", 15))
 
     def __dealWithET(self, e: Event) -> Event:
         if e.name in ["Adloquium", "Succor"] and self.removeStatus("EmergencyTactics"):
@@ -74,70 +76,71 @@ class Scholar(Healer):
 
     # 单奶
 
-    def Physick(self, target: Player) -> Record:
-        return self.buildRecord(target, value=450)
+    @targetSkill
+    def Physick(self, **kwargs) -> Record:
+        return self.buildRecord(value=450)
 
-    def Adloquium(self, target: Player) -> Record:
-        return self.buildRecord(target, value=300, status=Shield("Galvanize", 30, 540))
+    @targetSkill
+    def Adloquium(self, **kwargs) -> Record:
+        return self.buildRecord(value=300, status=Shield("Galvanize", 30, 540))
 
-    def Lustrate(self, target: Player) -> Record:
-        return self.buildRecord(target, value=600)
+    @targetSkill
+    def Lustrate(self, **kwargs) -> Record:
+        return self.buildRecord(value=600)
 
-    def Excogitation(self, target: Player) -> Record:
-        return self.buildRecord(target, status=DelayHeal("Excogitation", 45, 800))
+    @targetSkill
+    def Excogitation(self, **kwargs) -> Record:
+        return self.buildRecord(status=DelayHeal("Excogitation", 45, 800))
 
     @petSkill
-    def Aetherpact(self, time: int, target: Player) -> Record:
-        return self.buildRecord(target, status=Hot("Aetherpact", time, 300))
+    @targetSkill
+    def Aetherpact(self, **kwargs) -> Record:
+        time = kwargs.get("duration", 0)
+        return self.buildRecord(status=Hot("Aetherpact", time, 300))
 
-    def Protraction(self, target: Player) -> Record:
-        return self.buildRecord(target, status=IncreaseMaxHp("Protraction", 10, 1.1))
+    @targetSkill
+    def Protraction(self, **kwargs) -> Record:
+        return self.buildRecord(status=IncreaseMaxHp("Protraction", 10, 1.1))
 
     # 群奶
     @petSkill
-    def WhisperingDawn(self) -> Record:
-        return self.buildRecord(allPlayer, status=Hot("WhisperingDawn", 21, 80))
+    def WhisperingDawn(self, **kwargs) -> Record:
+        return self.buildRecord(status=Hot("WhisperingDawn", 21, 80))
 
-    def Succor(self) -> Record:
-        return self.buildRecord(
-            allPlayer, value=200, status=Shield("Galvanize", 30, 320)
-        )
+    def Succor(self, **kwargs) -> Record:
+        return self.buildRecord(value=200, status=Shield("Galvanize", 30, 320))
 
     @petSkill
-    def FeyIllumination(self) -> Record:
+    def FeyIllumination(self, **kwargs) -> Record:
         return self.buildRecord(
-            allPlayer,
             status=[
                 MagicMtg("FeyIllumination", 20, 0.95),
                 SpellBonus("FeyIllumination", 20, 1.1),
-            ],
+            ]
         )
 
-    def SacredSoil(self) -> Record:
+    def SacredSoil(self, **kwargs) -> Record:
         return self.buildRecord(
-            allPlayer,
             value=100,
             status=[
                 Mtg("SacredSoil", 17, 0.9),
-                Hot("SacredSoil", 15, 100, isGround=True),
+                Hot("SacredSoil", 15, 100, ground=True),
             ],
         )
 
-    def Indomitability(self) -> Record:
-        return self.buildRecord(allPlayer, value=400)
+    def Indomitability(self, **kwargs) -> Record:
+        return self.buildRecord(value=400)
 
     @petSkill
-    def FeyBlessing(self) -> Record:
-        return self.buildRecord(allPlayer, value=320)
+    def FeyBlessing(self, **kwargs) -> Record:
+        return self.buildRecord(value=320)
 
     @petSkill
-    def Consolation(self) -> Record:
-        return self.buildRecord(
-            allPlayer, value=250, status=Shield("Consolation", 30, 250)
-        )
+    def Consolation(self, **kwargs) -> Record:
+        return self.buildRecord(value=250, status=Shield("Consolation", 30, 250))
 
-    def Expedient(self) -> Record:
-        return self.buildRecord(allPlayer, status=Mtg("Expedient", 20, 0.9))
+    def Expedient(self, **kwargs) -> Record:
+        return self.buildRecord(status=Mtg("Expedient", 20, 0.9))
 
 
 class WhiteMage(Healer):
@@ -162,9 +165,9 @@ class WhiteMage(Healer):
                 )
         return super().asEventUser(event)
 
-    def PlenaryIndulgence(self) -> Record:
+    def PlenaryIndulgence(self, **kwargs) -> Record:
         """全大赦"""
-        return self.buildRecord(self, status=BaseStatus("PlenaryIndulgence", 10))
+        return self.buildRecord(True, status=BaseStatus("PlenaryIndulgence", 10))
 
     def update(self, timeInterval: float) -> list[Event]:
         self.bellCD -= timeInterval
@@ -183,73 +186,76 @@ class WhiteMage(Healer):
 
     # 单奶
 
-    def Cure(self, target: Player) -> Record:
-        return self.buildRecord(target, value=500)
+    @targetSkill
+    def Cure(self, **kwargs) -> Record:
+        return self.buildRecord(value=500)
 
-    def CureII(self, target: Player) -> Record:
-        return self.buildRecord(target, value=800)
+    @targetSkill
+    def CureII(self, **kwargs) -> Record:
+        return self.buildRecord(value=800)
 
-    def Regen(self, target: Player) -> Record:
-        return self.buildRecord(target, status=Hot("Regen", 18, 250))
+    @targetSkill
+    def Regen(self, **kwargs) -> Record:
+        return self.buildRecord(status=Hot("Regen", 18, 250))
 
-    def Benediction(self, target: Player) -> Record:
-        return self.buildRecord(target, value=1000000)
+    @targetSkill
+    def Benediction(self, **kwargs) -> Record:
+        return self.buildRecord(value=1000000)
 
-    def AfflatusSolace(self, target: Player) -> Record:
-        return self.buildRecord(target, value=800)
+    @targetSkill
+    def AfflatusSolace(self, **kwargs) -> Record:
+        return self.buildRecord(value=800)
 
-    def Tetragrammaton(self, target: Player) -> Record:
-        return self.buildRecord(target, value=700)
+    @targetSkill
+    def Tetragrammaton(self, **kwargs) -> Record:
+        return self.buildRecord(value=700)
 
-    def DivineBenison(self, target: Player) -> Record:
-        return self.buildRecord(target, status=Shield("DivineBenison", 15, 500))
+    @targetSkill
+    def DivineBenison(self, **kwargs) -> Record:
+        return self.buildRecord(status=Shield("DivineBenison", 15, 500))
 
-    def Aquaveil(self, target: Player) -> Record:
-        return self.buildRecord(target, status=Mtg("Aquaveil", 8, 0.85))
+    @targetSkill
+    def Aquaveil(self, **kwargs) -> Record:
+        return self.buildRecord(status=Mtg("Aquaveil", 8, 0.85))
 
-    def Medica(self) -> Record:
+    def Medica(self, **kwargs) -> Record:
         """医治"""
-        return self.buildRecord(allPlayer, value=400)
+        return self.buildRecord(value=400)
 
-    def AfflatusRapture(self) -> Record:
+    def AfflatusRapture(self, **kwargs) -> Record:
         """狂喜之心"""
-        return self.buildRecord(allPlayer, value=400)
+        return self.buildRecord(value=400)
 
-    def CureIII(self) -> Record:
+    def CureIII(self, **kwargs) -> Record:
         """愈疗"""
-        return self.buildRecord(allPlayer, value=600)
+        return self.buildRecord(value=600)
 
-    def MedicaII(self) -> Record:
+    def MedicaII(self, **kwargs) -> Record:
         """医济"""
-        return self.buildRecord(allPlayer, value=250, status=Hot("MedicaII", 15, 150))
+        return self.buildRecord(value=250, status=Hot("MedicaII", 15, 150))
 
-    def Asylum(self) -> Record:
+    def Asylum(self, **kwargs) -> Record:
         """庇护所"""
         return self.buildRecord(
-            allPlayer,
             value=100,
-            status=[
-                Hot("Asylum", 24, 100, isGround=True),
-                HealBonus("Asylum", 26, 1.1),
-            ],
+            status=[Hot("Asylum", 24, 100, ground=True), HealBonus("Asylum", 26, 1.1)],
         )
 
-    def Assize(self) -> Record:
+    def Assize(self, **kwargs) -> Record:
         """法令"""
-        return self.buildRecord(allPlayer, value=400)
+        return self.buildRecord(value=400)
 
-    def Temperance(self) -> list[Record]:
+    def Temperance(self, **kwargs) -> Record:
         """节制"""
-        return [
-            self.buildRecord(allPlayer, status=Mtg("Temperance", 22, 0.9)),
-            self.buildRecord(self, status=SpellBonus("Temperance", 20, 1.2)),
-        ]
+        return Record(
+            [
+                self.buildEvent(status=Mtg("Temperance", 22, 0.9)),
+                self.buildEvent(True, status=SpellBonus("Temperance", 20, 1.2)),
+            ]
+        )
 
-    def LiturgyOfTheBell(self) -> Record:
-        return self.buildRecord(self, status=BaseStatus("LiturgyOfTheBell", 20, 5))
-
-    def closeTheBell(self) -> Record:
-        return self.buildRecord(self)
+    def LiturgyOfTheBell(self, **kwargs) -> Record:
+        return self.buildRecord(True, status=BaseStatus("LiturgyOfTheBell", 20, 5))
 
 
 class Sage(Healer):
@@ -272,67 +278,65 @@ class Sage(Healer):
             event.getBuff(1.5)
         return super().asEventUser(event)
 
-    def Dignosis(self, target: Player) -> Record:
-        return self.buildRecord(target, value=450)
+    @targetSkill
+    def Dignosis(self, **kwargs) -> Record:
+        return self.buildRecord(value=450)
 
-    def Prognosis(self) -> Record:
-        return self.buildRecord(allPlayer, value=300)
+    def Prognosis(self, **kwargs) -> Record:
+        return self.buildRecord(value=300)
 
-    def PhysisII(self) -> Record:
+    def PhysisII(self, **kwargs) -> Record:
         return self.buildRecord(
-            allPlayer,
-            status=[Hot("PhysisII", 15, 130), HealBonus("PhysisII", 10, 1.1)],
+            status=[Hot("PhysisII", 15, 130), HealBonus("PhysisII", 10, 1.1)]
         )
 
-    def EkurasianDignosis(self, target: Player) -> Record:
+    @targetSkill
+    def EkurasianDignosis(self, **kwargs) -> Record:
+        return self.buildRecord(value=300, status=Shield("EkurasianDignosis", 30, 540))
+
+    def EkurasianPrognosis(self, **kwargs) -> Record:
+        return self.buildRecord(value=100, status=Shield("EkurasianPrognosis", 30, 320))
+
+    @targetSkill
+    def Druochole(self, **kwargs) -> Record:
+        return self.buildRecord(value=600)
+
+    def Kerachole(self, **kwargs) -> Record:
         return self.buildRecord(
-            target, value=300, status=Shield("EkurasianDignosis", 30, 540)
+            status=[Mtg("Kerachole", 15, 0.9), Hot("Kerachole", 15, 100)]
         )
 
-    def EkurasianPrognosis(self) -> Record:
+    def Ixochole(self, **kwargs) -> Record:
+        return self.buildRecord(value=400)
+
+    def Zoe(self, **kwargs) -> Record:
+        return self.buildRecord(True, status=BaseStatus("Zoe", 30))
+
+    @targetSkill
+    def Taurochole(self, **kwargs) -> Record:
+        return self.buildRecord(value=700, status=Mtg("Kerachole", 15, 0.9))
+
+    def Holos(self, **kwargs) -> Record:
         return self.buildRecord(
-            allPlayer, value=100, status=Shield("EkurasianPrognosis", 30, 320)
+            value=300, status=[Mtg("Holos", 20, 0.9), Shield("Holos", 30, 300)]
         )
 
-    def Druochole(self, target: Player) -> Record:
-        return self.buildRecord(target, value=600)
+    @targetSkill
+    def Krasis(self, **kwargs) -> Record:
+        return self.buildRecord(status=HealBonus("Krasis", 10, 1.2))
 
-    def Kerachole(self) -> Record:
-        return self.buildRecord(
-            allPlayer,
-            status=[Mtg("Kerachole", 15, 0.9), Hot("Kerachole", 15, 100)],
-        )
+    def Pneuma(self, **kwargs) -> Record:
+        return self.buildRecord(value=600)
 
-    def Ixochole(self) -> Record:
-        return self.buildRecord(allPlayer, value=400)
+    @targetSkill
+    def Haima(self, **kwargs) -> Record:
+        return self.buildRecord(status=HaimaShield("haima", 15, 300))
 
-    def Zoe(self) -> Record:
-        return self.buildRecord(self, status=BaseStatus("Zoe", 30))
+    def Panhaima(self, **kwargs) -> Record:
+        return self.buildRecord(status=HaimaShield("Panhaima", 15, 200))
 
-    def Taurochole(self, target: Player) -> Record:
-        return self.buildRecord(target, value=700, status=Mtg("Kerachole", 15, 0.9))
-
-    def Holos(self) -> Record:
-        return self.buildRecord(
-            allPlayer,
-            value=300,
-            status=[Mtg("Holos", 20, 0.9), Shield("Holos", 30, 300)],
-        )
-
-    def Krasis(self, target: Player) -> Record:
-        return self.buildRecord(target, status=HealBonus("Krasis", 10, 1.2))
-
-    def Pneuma(self) -> Record:
-        return self.buildRecord(allPlayer, value=600)
-
-    def Haima(self, target: Player) -> Record:
-        return self.buildRecord(target, status=HaimaShield("haima", 15, 300))
-
-    def Panhaima(self) -> Record:
-        return self.buildRecord(allPlayer, status=HaimaShield("Panhaima", 15, 200))
-
-    def Pepsis(self) -> Record:
-        return self.buildRecord(allPlayer, 350)
+    def Pepsis(self, **kwargs) -> Record:
+        return self.buildRecord(value=350)
 
 
 # class Astrologian(Healer):
@@ -343,7 +347,7 @@ class Sage(Healer):
 #         super().__init__("Astrologian", hp, potency, self.aoeSpell + self.singleSpell)
 #         self.SynastryTarget: Player = self
 
-#     def asEventUser(self, event: Event, target: Player) -> tuple[Event, Player]:
+#     def asEventUser(self, event: Event) -> tuple[Event, Player]:
 #         # if event.name == "Synastry":
 #         #     self.SynastryTarget = target
 #         if event.name in self.aoeSpell:
@@ -373,26 +377,26 @@ class Sage(Healer):
 #     #             self.SynastryTarget,
 #     #         )
 
-#     # def Synastry(self, target: Player) -> Record:
+#     # def Synastry(self) -> Record:
 #     #     return self.createRecord(target)
 
-#     def Benefic(self, target: Player) -> Record:
+#     def Benefic(self) -> Record:
 #         return self.createRecord(target, value=500)
 
-#     def BeneficII(self, target: Player) -> Record:
+#     def BeneficII(self) -> Record:
 #         return self.createRecord(target, value=800)
 
-#     def AspectedBenefic(self, target: Player) -> Record:
+#     def AspectedBenefic(self) -> Record:
 #         return self.createRecord(
 #             target, value=250, status=Hot("AspectedBenefic", 15, 250)
 #         )
 
-#     def CelestialIntersection(self, target: Player) -> Record:
+#     def CelestialIntersection(self) -> Record:
 #         return self.createRecord(
 #             target, value=200, status=Shield("CelestialIntersection", 30, 400)
 #         )
 
-#     def Exaltation(self, target: Player) -> Record:
+#     def Exaltation(self) -> Record:
 #         return self.createRecord(
 #             target,
 #             status=[Mtg("Exaltation", 8, 0.9), DelayHeal("Exaltation", 8, 500)],
