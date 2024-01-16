@@ -8,12 +8,12 @@ class MeleeDPS(Player):
         super().__init__(name, hp, potency, 0.78, 0.78)
 
     def Feint(self, **kwargs) -> Record:
-        return self.buildRecord(
-            status=[MagicMtg("Feint", 10, 0.95), PhysicsMtg("Addle", 10, 0.9)]
+        return self._buildRecord(
+            status=[MagicMtg("Feint", 10, 0.95), PhysicsMtg("Feint", 10, 0.9)]
         )
 
     def SecondWind(self, **kwargs) -> Record:
-        return self.buildRecord(True, value=500)
+        return self._buildRecord(True, value=500)
 
 
 class Monk(MeleeDPS):
@@ -21,7 +21,7 @@ class Monk(MeleeDPS):
         super().__init__("Monk", hp, potency)
 
     def RiddleOfEarth(self, **kwargs) -> Record:
-        return self.buildRecord(True, status=Mtg("RiddleOfEarth", 10, 0.8))
+        return self._buildRecord(True, status=Mtg("RiddleOfEarth", 10, 0.8))
 
 
 class Dragoon(MeleeDPS):
@@ -34,4 +34,4 @@ class Samurai(MeleeDPS):
         super().__init__("Samurai", hp, potency)
 
     def ThirdEye(self, **kwargs) -> Record:
-        return self.buildRecord(True, status=Mtg("ThirdEye", 4, 0.9))
+        return self._buildRecord(True, status=Mtg("ThirdEye", 4, 0.9))

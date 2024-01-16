@@ -1,4 +1,6 @@
 from __future__ import annotations
+from copy import deepcopy
+from dataclasses import dataclass, field
 
 import pandas as pd
 from models.status import BaseStatus, EventType, StatusRtn, Dot
@@ -8,35 +10,40 @@ if TYPE_CHECKING:
     from models.player import Player
 
 
+@dataclass
 class Event:
-    def __init__(
-        self,
-        eventType: EventType,
-        name: str,
-        user: "Player",
-        target: "Player",
-        value: float = 0,
-        status: list[BaseStatus] | BaseStatus = [],
-    ) -> None:
-        self.name: str = name
-        self.eventType: EventType = eventType
-        self.value: float = value
-        self.statusList: list[BaseStatus] = (
-            status if isinstance(status, list) else [status]
+    eventType: EventType
+    name: str
+    user: Player
+    target: Player
+    value: float = 0
+    statusList: list[BaseStatus] = field(default_factory=list)
+
+    def copy(self, target: "Player") -> Event:
+        return Event(
+            self.eventType,
+            self.name,
+            self.user,
+            target,
+            self.value,
+            deepcopy(self.statusList),
         )
-        self.user: Player = user
-        self.target: Player = target
 
     def getBuff(self, percentage: float) -> Event:
         self.value *= percentage
-        map(lambda x: x.getBuff(percentage), self.statusList)
+        self.statusList = list(map(lambda x: x.getBuff(percentage), self.statusList))
         return self
 
     def __str__(self) -> str:
-        return "{0}: {1}, EventType: {2}".format(
+        return "{0} do {1}({2}) on {3}, value: {4}{5}".format(
+            self.user.name,
             self.name,
+            self.eventType.name,
+            self.target.name,
             str(self.value),
-            ("magic" if self.eventType == EventType.MagicDmg else "physics"),
+            ", statusList:[{0}]".format(", ".join((str(i) for i in self.statusList)))
+            if self.statusList
+            else "",
         )
 
     def append(self, status: BaseStatus) -> None:
@@ -50,7 +57,7 @@ class Event:
             value=row["damage"],
             user=user,
             target=target,
-            status=Dot(row["name"], row["dotTime"], row["dotDamage"])
+            statusList=[Dot(row["name"], row["dotTime"], row["dotDamage"])]
             if row["hasDot"]
             else [],
         )

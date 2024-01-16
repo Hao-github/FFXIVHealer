@@ -2,6 +2,7 @@
 模拟buff和debuff的模型的文件
 """
 from __future__ import annotations
+from dataclasses import dataclass, field
 from enum import Enum
 from random import random
 
@@ -16,20 +17,22 @@ class EventType(Enum):
     MaxHpChange = 6  # 关于最大生命值的变动事件
 
 
+@dataclass
 class StatusRtn:
-    def __init__(self, eventType: EventType, name: str, value: float) -> None:
-        self.eventType: EventType = eventType
-        self.name: str = name
-        self.value: float = value
+    eventType: EventType
+    name: str
+    value: float
 
 
+@dataclass
 class BaseStatus:
-    def __init__(self, name: str, duration: float, value: float = 0) -> None:
-        self.name: str = name
-        self.duration: float = duration
-        self.remainTime: float = duration
-        self.value: float = value
-        self.getSnapshot: bool = False
+    name: str
+    duration: float = field(compare=False)
+    value: float = field(compare=False, default=0)
+    getSnapshot: bool = field(compare=False, default=False)
+
+    def __post_init__(self):
+        self.remainTime = self.duration
 
     def update(self, timeInterval: float, **kwargs) -> StatusRtn | None:
         self.remainTime -= timeInterval
@@ -37,15 +40,11 @@ class BaseStatus:
     def __str__(self) -> str:
         return "{0}: {1}s".format(self.name, str(round(self.remainTime, 2)))
 
-    def __eq__(self, __value: BaseStatus) -> bool:
-        return type(self) == type(__value) and self.name == __value.name
-
     def __lt__(self, __value: BaseStatus) -> bool:
         return self.value < __value.value
 
     def getBuff(self, percentage: float) -> BaseStatus:
-        if self.getSnapshot:
-            self.value *= percentage
+        self.value *= percentage if self.getSnapshot else 1
         return self
 
 
@@ -82,10 +81,9 @@ class SpellBonus(BaseStatus):
     pass
 
 
+@dataclass
 class Shield(BaseStatus):
-    def __init__(self, name: str, duration: float, value: float) -> None:
-        super().__init__(name, duration, value)
-        self.getSnapshot = True
+    getSnapshot: bool = True
 
 
 class maxHpShield(BaseStatus):
@@ -93,11 +91,13 @@ class maxHpShield(BaseStatus):
         return Shield(self.name, self.duration, maxHp * self.value // 100)
 
 
+@dataclass
 class Dot(BaseStatus):
-    def __init__(self, name: str, duration: float, value: float) -> None:
-        super().__init__(name, duration, value)
+    getSnapshot: bool = True
+
+    def __post_init__(self):
+        super().__post_init__()
         self.timer: Timer = Timer(3)
-        self.getSnapshot = True
 
     def update(self, timeInterval: float, **kwargs) -> StatusRtn | None:
         super().update(timeInterval)
@@ -105,18 +105,14 @@ class Dot(BaseStatus):
             return StatusRtn(EventType.TrueDamage, self.name, self.value)
 
 
+@dataclass
 class Hot(BaseStatus):
-    def __init__(
-        self,
-        name: str,
-        duration: float,
-        value: float,
-        interval: float = 3,
-        ground: bool = False,
-    ) -> None:
-        super().__init__(name, duration, value)
-        self.timer: Timer = Timer(interval)
-        self.getSnapshot: bool = not ground
+    interval: float = 3
+    getSnapshot: bool = True
+
+    def __post_init__(self):
+        self.remainTime = self.duration
+        self.timer: Timer = Timer(self.interval)
 
     def update(self, timeInterval: float, **kwargs) -> StatusRtn | None:
         super().update(timeInterval)
@@ -128,12 +124,9 @@ class Hot(BaseStatus):
             )
 
 
+@dataclass
 class DelayHeal(BaseStatus):
-    """Delay Heal, 指延迟治疗"""
-
-    def __init__(self, name: str, duration: float, value: float) -> None:
-        super().__init__(name, duration, value)
-        self.trigger: float = 0.5
+    trigger: float = 0.5
 
     def update(self, timeInterval: float, hpPercentage: float) -> StatusRtn | None:
         super().update(timeInterval)
@@ -142,19 +135,23 @@ class DelayHeal(BaseStatus):
             return StatusRtn(EventType.TrueHeal, self.name, self.value)
 
 
+@dataclass
 class IncreaseMaxHp(HealBonus):
+    increaseHpNum: int = 0
+
     def update(self, timeInterval: float, **kwargs) -> StatusRtn | None:
         super().update(timeInterval)
         if self.remainTime <= 0:
-            return StatusRtn(EventType.MaxHpChange, self.name, self.value)
+            return StatusRtn(EventType.MaxHpChange, self.name, self.increaseHpNum)
 
 
+@dataclass
 class HaimaShield(Shield):
-    def __init__(self, name: str, duration: float, value: float) -> None:
-        super().__init__(name, duration, value)
-        self.stack = 5
-        self.stackTime = 15
-        self.originValue = value
+    def __post_init__(self):
+        super().__post_init__()
+        self.stack: int = 5
+        self.stackTime: float = 15
+        self.originValue = self.value
 
     def getBuff(self, percentage: float) -> BaseStatus:
         self.originValue *= percentage

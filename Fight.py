@@ -1,5 +1,5 @@
-from copy import deepcopy
 from functools import reduce
+from typing import Any, Hashable
 import pandas as pd
 from models.player import allPlayer, boss, Player
 from models.event import Event
@@ -12,21 +12,30 @@ class Fight:
     recordQueue: RecordQueue = RecordQueue()
 
     @classmethod
-    def addbaseCofig(cls, bossFile: str, playerFile: str) -> None:
-        pd.read_csv(bossFile).apply(cls.__rowToRecord, axis=1)
+    def addbaseCofig(cls, bossFile: str, playerFile: str, skillFile: str) -> None:
+        pd.read_csv(bossFile).apply(cls.__rowToBossRecord, axis=1)
         pd.read_csv(playerFile).apply(cls.__rowToPlayer, axis=1)
+        list(
+            map(
+                cls.__rowToHealRecord,
+                pd.read_csv(skillFile)
+                .merge(pd.read_csv("Settings/translate.csv"), on="name")
+                .drop(columns=["name"])
+                .to_dict("records"),
+            )
+        )
 
     @classmethod
     def run(cls, step: float):
         if not cls.playerList or cls.recordQueue.empty():
             return
-        time: float = 0
+        time: float = -3
         while True:
             # 检查buff, 如果dot和hot跳了, 或者延迟治疗时间到了, 就产生立即的prepare事件
-            if dotAndHotList := reduce(
+            if x := reduce(
                 lambda x, y: x + y.update(step), cls.playerList.values(), []
             ):
-                cls.recordQueue.push(time, Record(dotAndHotList))
+                cls.recordQueue.push(time, Record(x, display=False))
             # 如果当前时间大于等于最近的事件的发生时间
             while time >= cls.recordQueue.nextRecordTime:
                 record = cls.recordQueue.pop()
@@ -35,9 +44,9 @@ class Fight:
                 else:
                     for event in record.eventList:
                         if a := event.target.dealWithReadyEvent(event):
-                            cls.recordQueue.push(time, Record(a))
-
-                    cls.showInfo(time, record.eventList[0])
+                            cls.recordQueue.push(time, Record([a]))
+                    if record.display:
+                        cls.showInfo(time, record.eventList[0])
 
                 if cls.recordQueue.empty():
                     return
@@ -54,9 +63,7 @@ class Fight:
                 newEventList.append(event.target.asEventTarget(event))
             else:
                 for player in cls.playerList.values():
-                    e = deepcopy(event)
-                    e.target = player
-                    newEventList.append(player.asEventTarget(e))
+                    newEventList.append(player.asEventTarget(event.copy(player)))
         record.eventList = newEventList
         return record
 
@@ -88,19 +95,37 @@ class Fight:
         return jobName
 
     @classmethod
-    def __rowToRecord(cls, row: pd.Series):
-        m, s = row["prepareTime"].strip().split(":")
+    def __rowToBossRecord(cls, row: pd.Series):
         cls.recordQueue.push(
-            int(m) * 60 + float(s),
+            cls.__toTimestamp(row["prepareTime"]),
             Record(
-                Event.fromRow(
-                    row,
-                    boss,
-                    allPlayer
-                    if row["target"] == "all"
-                    else cls.playerList[row["target"]],
-                ),
+                [
+                    Event.fromRow(
+                        row,
+                        boss,
+                        allPlayer
+                        if row["target"] == "all"
+                        else cls.playerList[row["target"]],
+                    )
+                ],
                 delay=row["delay"],
             ),
         )
         return row["prepareTime"]
+
+    @classmethod
+    def __rowToHealRecord(cls, myDict: dict[Hashable, Any]):
+        cls.recordQueue.push(
+            cls.__toTimestamp(myDict["time"]),
+            getattr(Fight.playerList[myDict["user"]], myDict["skillName"])(**myDict),
+        )
+
+    @staticmethod
+    def __toTimestamp(rawTime: str) -> float:
+        negative = False
+        if rawTime[0] == "-":
+            negative = True
+            rawTime = rawTime[1:]
+        m, s = rawTime.strip().split(":")
+        ret = int(m) * 60 + float(s)
+        return ret if not negative else -ret

@@ -1,16 +1,22 @@
+from dataclasses import dataclass, field
 import heapq
 from models.event import Event
 
-
+@dataclass
 class Record:
     """
     用于存放每场战斗中发生的事情
     """
-
-    def __init__(self, event: list[Event] | Event, delay: float = 0) -> None:
-        self.eventList: list[Event] = event if isinstance(event, list) else [event]
-        self.delay: float = delay
+    eventList: list[Event] = field(default_factory=list)
+    delay: float = 0
+    display: bool = True
+    def __post_init__(self):
         self.prepared: bool = False
+
+    def __str__(self) -> str:
+        return "delay: {0}, eventList: [{1}]".format(
+            str(self.delay), ", ".join(str(i) for i in self.eventList)
+        )
 
 
 class RecordQueue(object):

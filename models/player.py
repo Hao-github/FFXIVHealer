@@ -30,11 +30,10 @@ class Player:
         self.maxHp: int = hp
         self.hp: int = hp
         self.statusList: list[BaseStatus] = [
-            Hot("naturalHeal", 10000, hp / 100, ground=True),
+            Hot("naturalHeal", 10000, hp / 100, getSnapshot=False),
             MagicMtg("magicDefense", 10000, magicDefense),
             PhysicsMtg("physicsDefense", 10000, physicsDefense),
         ]
-        self.shieldList: list[Shield] = []
         self.potency: float = potency
         self.isSurvival: bool = True
 
@@ -50,7 +49,7 @@ class Player:
             # 从普通hot获得的治疗, 直接返回
             return event
         elif event.eventType == EventType.MaxHpChange:
-            self.__maxHpChange(int(event.value))
+            self.__maxHpChange(-int(event.value))
             return event
         elif event.eventType in [EventType.Heal, EventType.GroundHeal]:
             # 从普通治疗或者地面治疗获得的治疗, 计算实时增益
@@ -62,16 +61,16 @@ class Player:
         event.value = self.calDamageAfterShield(int(event.value))
         return event
 
-    def buildRecord(
+    def _buildRecord(
         self,
         selfTarget: bool = False,
         value: float = 0,
         status: list[BaseStatus] | BaseStatus = [],
         delay: float = 0,
     ) -> Record:
-        return Record(self.buildEvent(selfTarget, value, status), delay)
+        return Record([self._buildEvent(selfTarget, value, status)], delay)
 
-    def buildEvent(
+    def _buildEvent(
         self,
         selfTarget: bool = False,
         value: float = 0,
@@ -79,11 +78,11 @@ class Player:
     ):
         return Event(
             EventType.Heal,
-            traceback.extract_stack()[-2][2],
+            traceback.extract_stack()[-3][2],
             self,
             self if selfTarget else allPlayer,
             value,
-            status,
+            status if isinstance(status, list) else [status],
         )
 
     def calDamageAfterShield(self, damage: int) -> int:
@@ -110,8 +109,8 @@ class Player:
         if isinstance(status, maxHpShield):
             status = status.toShield(self.maxHp)
         elif isinstance(status, IncreaseMaxHp):
-            status.value = int(self.maxHp * status.value)
-            self.__maxHpChange(status.value)
+            status.increaseHpNum = int(self.maxHp * (status.value - 1))
+            self.__maxHpChange(status.increaseHpNum)
 
         for s in self.statusList:
             if s == status:
@@ -133,8 +132,7 @@ class Player:
     def dealWithReadyEvent(self, event: Event) -> Event | None:
         if not self.isSurvival:
             return
-        map(lambda status: self.getStatus(status), event.statusList)
-
+        list(map(lambda status: self.getStatus(status), event.statusList))
         # 对于治疗事件
         if event.eventType.value < 3:
             if event.name == "Pepsis":
