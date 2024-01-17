@@ -28,7 +28,7 @@ def groundSkill(func):
         ret: Record = func(self, *args, **kwargs)
         for status in ret.eventList[0].statusList:
             if isinstance(status, Hot):
-                status.getSnapshot = False
+                status.isGround = True
         return ret
 
     return wrapper

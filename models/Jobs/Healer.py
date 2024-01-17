@@ -1,5 +1,5 @@
 from functools import reduce
-from models.status import EventType
+from models.status import Bell, EventType
 from models.decorator import groundSkill, petSkill, targetSkill
 from models.status import (
     BaseStatus,
@@ -39,9 +39,9 @@ class Scholar(Healer):
 
     def asEventUser(self, event: Event) -> Event:
         if event.name == "Deployment" and (s := event.target.removeStatus("Galvanize")):
-            event.target = allPlayer
-            event.statusList.append(s)
-            return super().asEventUser(event)
+            return super().asEventUser(
+                Event(EventType.TrueHeal, "Deployment", event.user, allPlayer, 0, [s])
+            )
         event = self.__dealWithRct(event)
         event = self.__dealWithET(event)
         return super().asEventUser(event)
@@ -151,36 +151,28 @@ class WhiteMage(Healer):
             potency,
             ["Cure", "CureII", "Regen", "AfflatusSolace"] + self.aoeSpell,
         )
-        self.bellCD = 0
 
     def asEventUser(self, event: Event) -> Event:
         if event.name in self.aoeSpell and self.searchStatus("PlenaryIndulgence"):
             event.value += 200
         elif event.name == "closeTheBell":
-            if e := self.removeStatus("LiturgyOfTheBell"):
-                event = Event(
-                    EventType.Heal, "LiturgyHeal", self, allPlayer, e.value * 200
-                )
+            if e := self.searchStatus("LiturgyOfTheBell"):
+                e.remainTime = 0
+        elif event.name == "BellEnd":
+            event.target = allPlayer
         return super().asEventUser(event)
 
     def PlenaryIndulgence(self, **kwargs) -> Record:
         """全大赦"""
         return self._buildRecord(True, status=BaseStatus("PlenaryIndulgence", 10))
 
-    def update(self, timeInterval: float) -> list[Event]:
-        self.bellCD -= timeInterval
-        return super().update(timeInterval)
-
     def dealWithReadyEvent(self, event: Event) -> Event | None:
         super().dealWithReadyEvent(event)
-        if event.eventType.value > 2:
+        if event.eventType.value < 3:
             return
-        if (bell := self.searchStatus("LiturgyOfTheBell")) and self.bellCD <= 0:
-            bell.value -= 1
-            self.bellCD = 1
-            if bell.value == 0:
-                bell.remainTime = 0
-            return Event(EventType.Heal, "LiturgyHeal", self, allPlayer, 400)
+        if bell := self.searchStatus("LiturgyOfTheBell"):
+            if isinstance(bell, Bell) and (ret := bell.getHeal()):
+                return Event.fromStatusRtn(ret, self, allPlayer)
 
     # 单奶
 
@@ -254,7 +246,7 @@ class WhiteMage(Healer):
         )
 
     def LiturgyOfTheBell(self, **kwargs) -> Record:
-        return self._buildRecord(True, status=BaseStatus("LiturgyOfTheBell", 20, 5))
+        return self._buildRecord(True, status=Bell("LiturgyOfTheBell", 20, 5))
 
 
 class Sage(Healer):

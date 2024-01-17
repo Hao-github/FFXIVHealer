@@ -19,7 +19,7 @@ class Event:
     value: float = 0
     statusList: list[BaseStatus] = field(default_factory=list)
 
-    def copy(self, target: "Player") -> Event:
+    def shadowCopy(self, target: "Player") -> Event:
         return Event(
             self.eventType,
             self.name,
@@ -57,7 +57,7 @@ class Event:
             value=row["damage"],
             user=user,
             target=target,
-            statusList=[Dot(row["name"], row["dotTime"], row["dotDamage"])]
+            statusList=[Dot(row["name"], float(row["dotTime"]), float(row["dotDamage"]))]
             if row["hasDot"]
             else [],
         )

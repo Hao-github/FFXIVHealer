@@ -111,14 +111,15 @@ class Hot(BaseStatus):
     getSnapshot: bool = True
 
     def __post_init__(self):
-        self.remainTime = self.duration
+        self.remainTime: float = self.duration
+        self.isGround: bool = False
         self.timer: Timer = Timer(self.interval)
 
     def update(self, timeInterval: float, **kwargs) -> StatusRtn | None:
         super().update(timeInterval)
         if self.timer.update(timeInterval):
             return StatusRtn(
-                EventType.TrueHeal if self.getSnapshot else EventType.GroundHeal,
+                EventType.GroundHeal if self.isGround else EventType.TrueHeal,
                 self.name,
                 self.value,
             )
@@ -127,6 +128,7 @@ class Hot(BaseStatus):
 @dataclass
 class DelayHeal(BaseStatus):
     trigger: float = 0.5
+    getSnapshot: bool = True
 
     def update(self, timeInterval: float, hpPercentage: float) -> StatusRtn | None:
         super().update(timeInterval)
@@ -151,7 +153,7 @@ class HaimaShield(Shield):
         super().__post_init__()
         self.stack: int = 5
         self.stackTime: float = 15
-        self.originValue = self.value
+        self.originValue: float = self.value
 
     def getBuff(self, percentage: float) -> BaseStatus:
         self.originValue *= percentage
@@ -174,3 +176,27 @@ class HaimaShield(Shield):
     #         self.stack -= 1
     #         self.remainTime = self.duration
     #         self.value = self.originValue
+
+
+@dataclass
+class Bell(BaseStatus):
+    getSnapshot: bool = False
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.bellCD: float = 0
+
+    def update(self, timeInterval: float, **kwargs) -> StatusRtn | None:
+        super().update(timeInterval)
+        self.bellCD -= timeInterval
+        if self.remainTime <= 0 and self.value > 0:
+            return StatusRtn(EventType.Heal, "BellEnd", self.value * 200)
+
+    def getHeal(self) -> StatusRtn | None:
+        if self.bellCD > 0:
+            return
+        self.bellCD = 1
+        self.value -= 1
+        if self.value == 0:
+            self.remainTime = 0
+        return StatusRtn(EventType.Heal, "BellHeal", 400)

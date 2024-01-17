@@ -53,7 +53,7 @@ class Player:
             return event
         elif event.eventType in [EventType.Heal, EventType.GroundHeal]:
             # 从普通治疗或者地面治疗获得的治疗, 计算实时增益
-            return event.getBuff(self.calPct(HealBonus))
+            return event.getBuff(self.calPct(HealBonus)) #TODO: 地面治疗吃了两次增益
         elif event.eventType == EventType.MagicDmg:
             event.getBuff(self.calPct(MagicMtg))
         elif event.eventType == EventType.PhysicsDmg:
@@ -118,8 +118,8 @@ class Player:
                 return
 
         # 贤学群盾互顶
-        conflict = ["Galavinze", "EkurasianPrognosis", "EkurasianDignosis"]
-        if status not in conflict:
+        conflict = ["Galvanize", "EkurasianPrognosis", "EkurasianDignosis"]
+        if status.name not in conflict:
             return self.statusList.append(status)
         if status.name != conflict[0]:
             self.removeStatus(conflict[0])

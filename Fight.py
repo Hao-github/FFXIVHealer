@@ -10,11 +10,12 @@ from Settings.baseConfig import jobToClass
 class Fight:
     playerList: dict[str, Player] = {}
     recordQueue: RecordQueue = RecordQueue()
+    output = open("output.txt", "w", encoding="utf-8")
 
     @classmethod
     def addbaseCofig(cls, bossFile: str, playerFile: str, skillFile: str) -> None:
-        pd.read_csv(bossFile).apply(cls.__rowToBossRecord, axis=1)
         pd.read_csv(playerFile).apply(cls.__rowToPlayer, axis=1)
+        pd.read_csv(bossFile).apply(cls.__rowToBossRecord, axis=1)
         list(
             map(
                 cls.__rowToHealRecord,
@@ -32,6 +33,7 @@ class Fight:
         time: float = -3
         while True:
             # 检查buff, 如果dot和hot跳了, 或者延迟治疗时间到了, 就产生立即的prepare事件
+
             if x := reduce(
                 lambda x, y: x + y.update(step), cls.playerList.values(), []
             ):
@@ -63,7 +65,7 @@ class Fight:
                 newEventList.append(event.target.asEventTarget(event))
             else:
                 for player in cls.playerList.values():
-                    newEventList.append(player.asEventTarget(event.copy(player)))
+                    newEventList.append(player.asEventTarget(event.shadowCopy(player)))
         record.eventList = newEventList
         return record
 
@@ -71,10 +73,10 @@ class Fight:
     def showInfo(cls, time: float, event: Event):
         if event.name == "naturalHeal":
             return
-        print("After Event {0} At {1}".format(event.name, time))
+        cls.output.write("After Event {0} At {1}\n".format(event.name, time))
         for name, player in cls.playerList.items():
-            print(
-                "{0}-{1:<13}: {2:>6}, statusList: [{3}]".format(
+            cls.output.write(
+                "{0}-{1:<13}: {2:>6}, statusList: [{3}]\n".format(
                     name,
                     player.name,
                     str(player.hp),
