@@ -4,7 +4,7 @@ from models.player import Player
 from models.record import Record
 
 
-class PhysicsDPS(Player):
+class RangedDPS(Player):
     def __init__(self, name: str, hp: int, potency: float) -> None:
         super().__init__(name, hp, potency, 0.78, 0.78)
 
@@ -16,7 +16,7 @@ class PhysicsDPS(Player):
         return self._buildRecord(value=500)
 
 
-class Bard(PhysicsDPS):
+class Bard(RangedDPS):
     def __init__(self, hp: int, potency: float) -> None:
         super().__init__("Bard", hp, potency)
 
@@ -24,7 +24,7 @@ class Bard(PhysicsDPS):
         return self._buildRecord(status=HealBonus("NaturesMinne", 15, 1.15))
 
 
-class Dancer(PhysicsDPS):
+class Dancer(RangedDPS):
     stackList = [5, 6, 7, 8, 10]
 
     def __init__(self, hp: int, potency: float) -> None:
@@ -43,7 +43,7 @@ class Dancer(PhysicsDPS):
         return self._buildRecord(value=300)
 
 
-class Machinist(PhysicsDPS):
+class Machinist(RangedDPS):
     def __init__(self, hp: int, potency: float) -> None:
         super().__init__("Machinist", hp, potency)
 

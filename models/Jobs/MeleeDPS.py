@@ -1,5 +1,5 @@
 from models.decorator import selfSkill
-from models.status import HealBonus, MagicMtg, Mtg, PhysicsMtg
+from models.status import HealBonus, MagicMtg, Mtg, PhysicMtg
 from models.player import Player
 from models.record import Record
 
@@ -10,7 +10,7 @@ class MeleeDPS(Player):
 
     def Feint(self, **kwargs) -> Record:
         return self._buildRecord(
-            status=[MagicMtg("Feint", 10, 0.95), PhysicsMtg("Feint", 10, 0.9)]
+            status=[MagicMtg("Feint", 10, 0.95), PhysicMtg("Feint", 10, 0.9)]
         )
 
     @selfSkill

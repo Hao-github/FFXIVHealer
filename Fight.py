@@ -1,6 +1,6 @@
 from functools import reduce
 import pandas as pd
-from models.player import allPlayer, boss, Player
+from models.player import allPlayer, Player
 from models.event import Event
 from models.record import RecordQueue, Record
 
@@ -9,6 +9,7 @@ class Fight:
     playerList: dict[str, Player] = {}
     recordQueue: RecordQueue = RecordQueue()
     output = open("output.txt", "w", encoding="utf-8")
+    boss = Player("boss", 0, 0, 0, 0)
 
     @classmethod
     def addbaseCofig(cls, excelFile: str) -> None:
@@ -82,7 +83,7 @@ class Fight:
     def __rowToBossRecord(cls, row: pd.Series):
         event = Event.fromRow(
             row,
-            boss,
+            cls.boss,
             allPlayer if row["target"] == "all" else cls.playerList[row["target"]],
         )
         cls.recordQueue.push(

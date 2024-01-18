@@ -33,7 +33,7 @@ class Healer(Player):
 
 class Scholar(Healer):
     def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("Scholar", hp, potency, ["Adloquium", "Succor", "Physics"])
+        super().__init__("Scholar", hp, potency, ["Adloquium", "Succor", "Physick"])
         self.petCoefficient: float = 0.95
         self.critNum: float = 1.6
 

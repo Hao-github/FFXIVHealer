@@ -1,4 +1,4 @@
-from models.status import HealBonus, Hot, MagicMtg, PhysicsMtg
+from models.status import HealBonus, Hot, MagicMtg, PhysicMtg
 from models.decorator import petSkill, targetSkill
 from models.player import Player
 from models.record import Record
@@ -10,7 +10,7 @@ class MagicDPS(Player):
 
     def Addle(self, **kwargs) -> Record:
         return self._buildRecord(
-            status=[MagicMtg("Addle", 10, 0.9), PhysicsMtg("Addle", 10, 0.95)]
+            status=[MagicMtg("Addle", 10, 0.9), PhysicMtg("Addle", 10, 0.95)]
         )
 
 

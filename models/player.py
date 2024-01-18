@@ -10,7 +10,7 @@ from models.status import (
     Hot,
     IncreaseMaxHp,
     MagicMtg,
-    PhysicsMtg,
+    PhysicMtg,
     Shield,
     maxHpShield,
 )
@@ -24,7 +24,7 @@ class Player:
         hp: int,
         potency: float,
         magicDefense: float,
-        physicsDefense: float,
+        physicDefense: float,
     ) -> None:
         self.name: str = name
         self.maxHp: int = hp
@@ -32,7 +32,7 @@ class Player:
         self.statusList: list[BaseStatus] = [
             Hot("naturalHeal", 10000, hp / 100, getSnapshot=False),
             MagicMtg("magicDefense", 10000, magicDefense),
-            PhysicsMtg("physicsDefense", 10000, physicsDefense),
+            PhysicMtg("physicDefense", 10000, physicDefense),
         ]
         self.potency: float = potency
         self.isSurvival: bool = True
@@ -56,8 +56,8 @@ class Player:
             return event.getBuff(self.calPct(HealBonus))  # TODO: 地面治疗吃了两次增益
         elif event.eventType == EventType.MagicDmg:
             event.getBuff(self.calPct(MagicMtg))
-        elif event.eventType == EventType.PhysicsDmg:
-            event.getBuff(self.calPct(PhysicsMtg))
+        elif event.eventType == EventType.PhysicDmg:
+            event.getBuff(self.calPct(PhysicMtg))
         event.value = self.calDamageAfterShield(int(event.value))
         return event
 
@@ -190,10 +190,9 @@ class Player:
             ", ".join(
                 str(i)
                 for i in self.statusList
-                if i.name not in ["naturalHeal", "magicDefense", "physicsDefense"]
+                if i.name not in ["naturalHeal", "magicDefense", "physicDefense"]
             ),
         )
 
 
 allPlayer = Player("totalPlayer", 0, 0, 0, 0)
-boss = Player("boss", 0, 0, 0, 0)
