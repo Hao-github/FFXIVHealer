@@ -1,4 +1,4 @@
-from models.status import MagicMtg, Mtg, PhysicsMtg
+from models.status import HealBonus, MagicMtg, Mtg, PhysicsMtg
 from models.player import Player
 from models.record import Record
 
@@ -22,6 +22,9 @@ class Monk(MeleeDPS):
 
     def RiddleOfEarth(self, **kwargs) -> Record:
         return self._buildRecord(True, status=Mtg("RiddleOfEarth", 10, 0.8))
+
+    def Mantra(self, **kwargs) -> Record:
+        return self._buildRecord(status=HealBonus("Mantra", 15, 1.1))
 
 
 class Dragoon(MeleeDPS):

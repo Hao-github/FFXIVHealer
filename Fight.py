@@ -4,7 +4,6 @@ import pandas as pd
 from models.player import allPlayer, boss, Player
 from models.event import Event
 from models.record import RecordQueue, Record
-from Settings.baseConfig import jobToClass
 
 
 class Fight:
@@ -13,18 +12,12 @@ class Fight:
     output = open("output.txt", "w", encoding="utf-8")
 
     @classmethod
-    def addbaseCofig(cls, bossFile: str, playerFile: str, skillFile: str) -> None:
-        pd.read_csv(playerFile).apply(cls.__rowToPlayer, axis=1)
-        pd.read_csv(bossFile).apply(cls.__rowToBossRecord, axis=1)
-        list(
-            map(
-                cls.__rowToHealRecord,
-                pd.read_csv(skillFile)
-                .merge(pd.read_csv("Settings/translate.csv"), on="name")
-                .drop(columns=["name"])
-                .to_dict("records"),
-            )
-        )
+    def addbaseCofig(cls, excelFile: str) -> None:
+        dfDict = pd.read_excel(excelFile, sheet_name=None)
+        dfDict["小队列表"].apply(cls.__rowToPlayer, axis=1)
+        dfDict["BOSS时间轴"].apply(cls.__rowToBossRecord, axis=1)
+        for r in dfDict["奶轴"].merge(dfDict["技能"], on="name").to_dict("records"):
+            cls.__rowToHealRecord(r)
 
     @classmethod
     def run(cls, step: float):
@@ -91,29 +84,21 @@ class Fight:
 
     @classmethod
     def __rowToPlayer(cls, row: pd.Series):
-        jobName = row["job"]
-        jobClass = getattr(__import__("models.Jobs." + jobToClass[jobName]), jobName)
+        jobClass = getattr(__import__("models.Jobs." + row["class"]), row["job"])
         cls.playerList[row["name"]] = jobClass(row["hp"], row["potency"])
-        return jobName
+        return 0
 
     @classmethod
     def __rowToBossRecord(cls, row: pd.Series):
-        cls.recordQueue.push(
-            cls.__toTimestamp(row["prepareTime"]),
-            Record(
-                [
-                    Event.fromRow(
-                        row,
-                        boss,
-                        allPlayer
-                        if row["target"] == "all"
-                        else cls.playerList[row["target"]],
-                    )
-                ],
-                delay=row["delay"],
-            ),
+        event = Event.fromRow(
+            row,
+            boss,
+            allPlayer if row["target"] == "all" else cls.playerList[row["target"]],
         )
-        return row["prepareTime"]
+        cls.recordQueue.push(
+            cls.__toTimestamp(row["prepareTime"]), Record([event], delay=row["delay"])
+        )
+        return 0
 
     @classmethod
     def __rowToHealRecord(cls, myDict: dict[Hashable, Any]):

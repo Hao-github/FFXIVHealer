@@ -29,12 +29,11 @@ class Dancer(PhysicsDPS):
         super().__init__("Dancer", hp, potency)
 
     def Improvisation(self, **kwargs) -> Record:
+        duration: int = min(4, int(kwargs.get("stack", 0)) // 3)
         return self._buildRecord(
             status=[
-                maxHpShield(
-                    "Improvisation", 30, self.stackList[kwargs.get("stack", 0)]
-                ),
-                Hot("Improvisation", 15, 100),
+                maxHpShield("Improvisation", 30, self.stackList[duration]),
+                Hot("Improvisation", 15 + duration, 100),
             ],
         )
 
