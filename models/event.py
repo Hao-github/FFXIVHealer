@@ -19,7 +19,7 @@ class Event:
     value: float = 0
     statusList: list[BaseStatus] = field(default_factory=list)
 
-    def shadowCopy(self, target: "Player") -> Event:
+    def copy(self, target: "Player") -> Event:
         return Event(
             self.eventType,
             self.name,

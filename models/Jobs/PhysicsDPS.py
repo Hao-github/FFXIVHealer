@@ -1,3 +1,4 @@
+from models.decorator import selfSkill
 from models.status import Mtg, HealBonus, Hot, maxHpShield
 from models.player import Player
 from models.record import Record
@@ -10,8 +11,9 @@ class PhysicsDPS(Player):
     def Tactician(self, **kwargs) -> Record:
         return self._buildRecord(status=Mtg("Tactician", 15, 0.9))
 
+    @selfSkill
     def SecondWind(self, **kwargs) -> Record:
-        return self._buildRecord(True, value=500)
+        return self._buildRecord(value=500)
 
 
 class Bard(PhysicsDPS):

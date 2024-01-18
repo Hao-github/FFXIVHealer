@@ -53,7 +53,7 @@ class Player:
             return event
         elif event.eventType in [EventType.Heal, EventType.GroundHeal]:
             # 从普通治疗或者地面治疗获得的治疗, 计算实时增益
-            return event.getBuff(self.calPct(HealBonus)) #TODO: 地面治疗吃了两次增益
+            return event.getBuff(self.calPct(HealBonus))  # TODO: 地面治疗吃了两次增益
         elif event.eventType == EventType.MagicDmg:
             event.getBuff(self.calPct(MagicMtg))
         elif event.eventType == EventType.PhysicsDmg:
@@ -63,12 +63,11 @@ class Player:
 
     def _buildRecord(
         self,
-        selfTarget: bool = False,
         value: float = 0,
         status: list[BaseStatus] | BaseStatus = [],
         delay: float = 0,
     ) -> Record:
-        return Record([self._buildEvent(selfTarget, value, status)], delay)
+        return Record([self._buildEvent(value=value, status=status)], delay)
 
     def _buildEvent(
         self,
@@ -182,6 +181,18 @@ class Player:
 
     def removeStatus(self, name: str) -> BaseStatus | None:
         return self.searchStatus(name, True)
+
+    def __str__(self) -> str:
+        return "{0:<13}: {1:>6}/{2:<6}, statusList: [{3}]\n".format(
+            self.name,
+            str(self.hp),
+            str(self.maxHp),
+            ", ".join(
+                str(i)
+                for i in self.statusList
+                if i.name not in ["naturalHeal", "magicDefense", "physicsDefense"]
+            ),
+        )
 
 
 allPlayer = Player("totalPlayer", 0, 0, 0, 0)

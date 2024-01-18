@@ -23,12 +23,23 @@ def targetSkill(func):
 
     return wrapper
 
+
 def groundSkill(func):
     def wrapper(self, *args, **kwargs):
         ret: Record = func(self, *args, **kwargs)
         for status in ret.eventList[0].statusList:
             if isinstance(status, Hot):
                 status.isGround = True
+        return ret
+
+    return wrapper
+
+
+def selfSkill(func):
+    def wrapper(self, *args, **kwargs):
+        ret: Record = func(self, *args, **kwargs)
+        for event in ret.eventList:
+            event.target = self
         return ret
 
     return wrapper

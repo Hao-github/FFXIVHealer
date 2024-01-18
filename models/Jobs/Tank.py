@@ -1,5 +1,5 @@
 from functools import reduce
-from models.decorator import targetSkill
+from models.decorator import selfSkill, targetSkill
 from models.status import (
     BaseStatus,
     DelayHeal,
@@ -22,11 +22,13 @@ class Tank(Player):
     def Reprisal(self, **kwargs) -> Record:
         return self._buildRecord(status=Mtg("Reprisal", 10, 0.9))
 
+    @selfSkill
     def Vengeance(self, **kwargs) -> Record:
-        return self._buildRecord(True, status=Mtg("Vengeance", 15, 0.7))
+        return self._buildRecord(status=Mtg("Vengeance", 15, 0.7))
 
+    @selfSkill
     def Rampart(self, **kwargs) -> Record:
-        return self._buildRecord(True, status=Mtg("Rampart", 20, 0.8))
+        return self._buildRecord(status=Mtg("Rampart", 20, 0.8))
 
 
 class Paladin(Tank):
@@ -50,17 +52,18 @@ class Paladin(Tank):
     def PassageOfArms(self, **kwargs) -> Record:
         return self._buildRecord(status=Mtg("PassageOfArms", 5, 0.85))
 
+    @selfSkill
     def Bulwark(self, **kwargs) -> Record:
-        return self._buildRecord(True, status=Mtg("Bulwark", 10, 0.8))
+        return self._buildRecord(status=Mtg("Bulwark", 10, 0.8))
 
+    @selfSkill
     def HolySheltron(self, **kwargs) -> Record:
         return self._buildRecord(
-            True,
             status=[
                 Mtg("HolySheltron", 8, 0.85),
                 Mtg("Knight'sResolve", 4, 0.85),
                 Hot("Knight'sResolve", 12, 250),
-            ],
+            ]
         )
 
     @targetSkill
@@ -69,8 +72,9 @@ class Paladin(Tank):
             status=[Mtg("Knight'sResolve", 4, 0.9), Hot("Knight'sResolve", 12, 250)]
         )
 
+    @selfSkill
     def HallowedGround(self, **kwargs) -> Record:
-        return self._buildRecord(True, status=Shield("HallowedGround", 10, 1000000))
+        return self._buildRecord(status=Shield("HallowedGround", 10, 1000000))
 
 
 class Warrior(Tank):
@@ -92,9 +96,9 @@ class Warrior(Tank):
     def ShakeItOff(self, **kwargs) -> Record:
         return self._buildRecord(value=300, status=Hot("ShakeItOffHot", 15, 100))
 
+    @selfSkill
     def Bloodwhetting(self, **kwargs) -> Record:
         return self._buildRecord(
-            True,
             status=[
                 Mtg("Bloodwhetting", 8, 0.9),
                 Mtg("StemTheFlow", 4, 0.9),
@@ -121,14 +125,17 @@ class Warrior(Tank):
             ]
         )
 
+    @selfSkill
     def Equilibrium(self, **kwargs) -> Record:
-        return self._buildRecord(True, value=1200, status=Hot("Equilibrium", 15, 200))
+        return self._buildRecord(value=1200, status=Hot("Equilibrium", 15, 200))
 
+    @selfSkill
     def TrillOfBattle(self, **kwargs) -> Record:
-        return self._buildRecord(True, status=IncreaseMaxHp("TrillOfBattle", 10, 1.2))
+        return self._buildRecord(status=IncreaseMaxHp("TrillOfBattle", 10, 1.2))
 
+    @selfSkill
     def Holmgang(self, **kwargs) -> Record:
-        return self._buildRecord(True, status=BaseStatus("Holmgang", 10))
+        return self._buildRecord(status=BaseStatus("Holmgang", 10))
 
 
 class GunBreaker(Tank):
@@ -149,8 +156,9 @@ class GunBreaker(Tank):
     def Aurora(self, **kwargs) -> Record:
         return self._buildRecord(status=Hot("Aurora", 18, 200))
 
+    @selfSkill
     def Camouflage(self, **kwargs) -> Record:
-        return self._buildRecord(True, status=Mtg("Camouflage", 20, 0.9))
+        return self._buildRecord(status=Mtg("Camouflage", 20, 0.9))
 
     @targetSkill
     def HeartOfCorundum(self, **kwargs) -> Record:
@@ -162,8 +170,9 @@ class GunBreaker(Tank):
             ]
         )
 
+    @selfSkill
     def Superbolide(self, **kwargs) -> Record:
-        return self._buildRecord(True, status=Shield("Superbolide", 10, 1000000))
+        return self._buildRecord(status=Shield("Superbolide", 10, 1000000))
 
 
 class DarkKnight(Tank):
@@ -173,8 +182,9 @@ class DarkKnight(Tank):
     def DarkMissionary(self, **kwargs) -> Record:
         return self._buildRecord(status=MagicMtg("DarkMissionary", 15, 0.9))
 
+    @selfSkill
     def DarkMind(self, **kwargs) -> Record:
-        return self._buildRecord(True, status=MagicMtg("DarkMind", 10, 0.8))
+        return self._buildRecord(status=MagicMtg("DarkMind", 10, 0.8))
 
     @targetSkill
     def TheBlackestNight(self, **kwargs) -> Record:
@@ -184,5 +194,6 @@ class DarkKnight(Tank):
     def Oblation(self, **kwargs) -> Record:
         return self._buildRecord(status=Mtg("Oblation", 10, 0.9))
 
+    @selfSkill
     def LivingDead(self, **kwargs) -> Record:
-        return self._buildRecord(True, status=BaseStatus("LivingDead", 10))
+        return self._buildRecord(status=BaseStatus("LivingDead", 10))

@@ -1,5 +1,4 @@
 from functools import reduce
-from typing import Any, Hashable
 import pandas as pd
 from models.player import allPlayer, boss, Player
 from models.event import Event
@@ -17,7 +16,10 @@ class Fight:
         dfDict["小队列表"].apply(cls.__rowToPlayer, axis=1)
         dfDict["BOSS时间轴"].apply(cls.__rowToBossRecord, axis=1)
         for r in dfDict["奶轴"].merge(dfDict["技能"], on="name").to_dict("records"):
-            cls.__rowToHealRecord(r)
+            cls.recordQueue.push(
+                cls.__toTimestamp(r["time"]),
+                getattr(Fight.playerList[r["user"]], r["skillName"])(**r),
+            )
 
     @classmethod
     def run(cls, step: float):
@@ -58,7 +60,7 @@ class Fight:
                 newEventList.append(event.target.asEventTarget(event))
             else:
                 for player in cls.playerList.values():
-                    newEventList.append(player.asEventTarget(event.shadowCopy(player)))
+                    newEventList.append(player.asEventTarget(event.copy(player)))
         record.eventList = newEventList
         return record
 
@@ -68,19 +70,7 @@ class Fight:
             return
         cls.output.write("After Event {0} At {1}\n".format(event.name, time))
         for name, player in cls.playerList.items():
-            cls.output.write(
-                "{0}-{1:<13}: {2:>6}, statusList: [{3}]\n".format(
-                    name,
-                    player.name,
-                    str(player.hp),
-                    ", ".join(
-                        str(i)
-                        for i in player.statusList
-                        if i.name
-                        not in ["naturalHeal", "magicDefense", "physicsDefense"]
-                    ),
-                ),
-            )
+            cls.output.write("{0}-{1}".format(name, str(player)))
 
     @classmethod
     def __rowToPlayer(cls, row: pd.Series):
@@ -99,13 +89,6 @@ class Fight:
             cls.__toTimestamp(row["prepareTime"]), Record([event], delay=row["delay"])
         )
         return 0
-
-    @classmethod
-    def __rowToHealRecord(cls, myDict: dict[Hashable, Any]):
-        cls.recordQueue.push(
-            cls.__toTimestamp(myDict["time"]),
-            getattr(Fight.playerList[myDict["user"]], myDict["skillName"])(**myDict),
-        )
 
     @staticmethod
     def __toTimestamp(rawTime: str) -> float:

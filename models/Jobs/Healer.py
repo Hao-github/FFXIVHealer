@@ -1,6 +1,6 @@
 from functools import reduce
 from models.status import Bell, EventType
-from models.decorator import groundSkill, petSkill, targetSkill
+from models.decorator import groundSkill, petSkill, selfSkill, targetSkill
 from models.status import (
     BaseStatus,
     DelayHeal,
@@ -46,8 +46,9 @@ class Scholar(Healer):
         event = self.__dealWithET(event)
         return super().asEventUser(event)
 
+    @selfSkill
     def Recitation(self, **kwargs) -> Record:
-        return self._buildRecord(True, status=BaseStatus("Recitation", 15))
+        return self._buildRecord(status=BaseStatus("Recitation", 15))
 
     def __dealWithRct(self, e: Event) -> Event:
         if e.name not in ["Adloquium", "Succor", "Indomitability", "Excogitation"]:
@@ -58,15 +59,17 @@ class Scholar(Healer):
             e.append(Shield("Catalyze", 30, 540))
         return e.getBuff(self.critNum)
 
+    @selfSkill
     def Dissipation(self, **kwargs) -> Record:
-        return self._buildRecord(True, status=SpellBonus("Dissipation", 30, 1.2))
+        return self._buildRecord(status=SpellBonus("Dissipation", 30, 1.2))
 
     @targetSkill
     def Deployment(self, **kwargs) -> Record:
         return self._buildRecord()
 
+    @selfSkill
     def EmergencyTactics(self, **kwargs) -> Record:
-        return self._buildRecord(True, status=BaseStatus("EmergencyTactics", 15))
+        return self._buildRecord(status=BaseStatus("EmergencyTactics", 15))
 
     def __dealWithET(self, e: Event) -> Event:
         if e.name in ["Adloquium", "Succor"] and self.removeStatus("EmergencyTactics"):
@@ -162,9 +165,10 @@ class WhiteMage(Healer):
             event.target = allPlayer
         return super().asEventUser(event)
 
+    @selfSkill
     def PlenaryIndulgence(self, **kwargs) -> Record:
         """全大赦"""
-        return self._buildRecord(True, status=BaseStatus("PlenaryIndulgence", 10))
+        return self._buildRecord(status=BaseStatus("PlenaryIndulgence", 10))
 
     def dealWithReadyEvent(self, event: Event) -> Event | None:
         super().dealWithReadyEvent(event)
@@ -245,8 +249,9 @@ class WhiteMage(Healer):
             ]
         )
 
+    @selfSkill
     def LiturgyOfTheBell(self, **kwargs) -> Record:
-        return self._buildRecord(True, status=Bell("LiturgyOfTheBell", 20, 5))
+        return self._buildRecord(status=Bell("LiturgyOfTheBell", 20, 5))
 
 
 class Sage(Healer):
@@ -302,8 +307,9 @@ class Sage(Healer):
     def Ixochole(self, **kwargs) -> Record:
         return self._buildRecord(value=400)
 
+    @selfSkill
     def Zoe(self, **kwargs) -> Record:
-        return self._buildRecord(True, status=BaseStatus("Zoe", 30))
+        return self._buildRecord(status=BaseStatus("Zoe", 30))
 
     @targetSkill
     def Taurochole(self, **kwargs) -> Record:
