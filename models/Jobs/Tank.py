@@ -102,7 +102,7 @@ class Warrior(Tank):
             status=[
                 Mtg("Bloodwhetting", 8, 0.9),
                 Mtg("StemTheFlow", 4, 0.9),
-                Hot("BloodwhettingHot", 7.5, 400, interval=2.5),
+                Hot("Bloodwhetting", 7.5, 400, interval=2.5, display=False),
                 Shield("StemTheTide", 20, 400),
             ],
         )
@@ -115,12 +115,12 @@ class Warrior(Tank):
                     status=[
                         Mtg("NascentFlash", 8, 0.9),
                         Mtg("StemTheFlow", 4, 0.9),
-                        Hot("NascentFlashHot", 7.5, 400, interval=2.5),
+                        Hot("NascentFlash", 7.5, 400, interval=2.5, display=False),
                         Shield("StemTheTide", 20, 400),
                     ]
                 ),
                 self._buildEvent(
-                    True, status=Hot("NascentFlashHot", 7.5, 400, interval=2.5)
+                    True, status=Hot("NascentFlash", 7.5, 400, interval=2.5)
                 ),
             ]
         )

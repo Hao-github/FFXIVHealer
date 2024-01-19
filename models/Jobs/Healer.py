@@ -118,7 +118,7 @@ class Scholar(Healer):
         return self._buildRecord(
             status=[
                 MagicMtg("FeyIllumination", 20, 0.95),
-                SpellBonus("FeyIllumination", 20, 1.1),
+                SpellBonus("FeyIllumination", 20, 1.1, display=False),
             ]
         )
 
@@ -168,7 +168,7 @@ class WhiteMage(Healer):
 
     def dealWithReadyEvent(self, event: Event) -> Event | None:
         super().dealWithReadyEvent(event)
-        if event.eventType.value < 3:
+        if event.eventType.value < 4:
             return
         if bell := self.searchStatus("LiturgyOfTheBell"):
             if isinstance(bell, Bell) and (ret := bell.getHeal()):

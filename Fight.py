@@ -38,6 +38,8 @@ class Fight:
             while time >= cls.recordQueue.nextRecordTime:
                 record = cls.recordQueue.pop()
                 if not record.prepared:
+                    if time > 31.1:
+                        pass
                     cls.recordQueue.push(time + record.delay, cls.forUnprepared(record))
                 else:
                     for event in record.eventList:

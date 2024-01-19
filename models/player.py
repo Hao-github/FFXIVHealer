@@ -40,7 +40,9 @@ class Player:
     def asEventUser(self, event: Event) -> Event:
         """作为事件的使用者, 如果是治疗事件, 计算自身身上的威力"""
         return (
-            event.getBuff(self.potency) if event.eventType == EventType.Heal else event
+            event.getBuff(self.potency)
+            if event.eventType in [EventType.Heal, EventType.GroundInit]
+            else event
         )
 
     def asEventTarget(self, event: Event) -> Event:
@@ -48,12 +50,15 @@ class Player:
         if event.eventType == EventType.TrueHeal:
             # 从普通hot获得的治疗, 直接返回
             return event
+        elif event.eventType == EventType.GroundInit:
+            event.value *= self.calPct(HealBonus)
+            return event
         elif event.eventType == EventType.MaxHpChange:
             self.__maxHpChange(-int(event.value))
             return event
         elif event.eventType in [EventType.Heal, EventType.GroundHeal]:
             # 从普通治疗或者地面治疗获得的治疗, 计算实时增益
-            return event.getBuff(self.calPct(HealBonus))  # TODO: 地面治疗吃了两次增益
+            return event.getBuff(self.calPct(HealBonus))
         elif event.eventType == EventType.MagicDmg:
             event.getBuff(self.calPct(MagicMtg))
         elif event.eventType == EventType.PhysicDmg:
@@ -133,7 +138,7 @@ class Player:
             return
         list(map(lambda status: self.getStatus(status), event.statusList))
         # 对于治疗事件
-        if event.eventType.value < 3:
+        if event.eventType.value < 4:
             if event.nameIs("Pepsis"):
                 if self.removeStatus("EkurasianDignosis"):
                     event.getBuff(1.4)

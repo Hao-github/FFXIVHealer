@@ -10,7 +10,10 @@ class MagicDPS(Player):
 
     def Addle(self, **kwargs) -> Record:
         return self._buildRecord(
-            status=[MagicMtg("Addle", 10, 0.9), PhysicMtg("Addle", 10, 0.95)]
+            status=[
+                MagicMtg("Addle", 10, 0.9),
+                PhysicMtg("Addle", 10, 0.95, display=False),
+            ]
         )
 
 
@@ -22,7 +25,7 @@ class RedMage(MagicDPS):
         return self._buildRecord(
             status=[
                 MagicMtg("MagickBarrier", 10, 0.9),
-                HealBonus("MagickBarrier", 10, 1.05),
+                HealBonus("MagickBarrier", 10, 1.05, display=False),
             ]
         )
 

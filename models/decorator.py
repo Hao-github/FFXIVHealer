@@ -1,6 +1,6 @@
 import Fight
 from models.record import Record
-from models.status import Hot
+from models.status import EventType, Hot
 
 
 def petSkill(func):
@@ -30,6 +30,7 @@ def groundSkill(func):
         for status in ret.eventList[0].statusList:
             if isinstance(status, Hot):
                 status.isGround = True
+        ret.eventList[0].eventType = EventType.GroundInit
         return ret
 
     return wrapper

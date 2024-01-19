@@ -12,7 +12,10 @@ class MeleeDPS(Player):
 
     def Feint(self, **kwargs) -> Record:
         return self._buildRecord(
-            status=[MagicMtg("Feint", 10, 0.95), PhysicMtg("Feint", 10, 0.9)]
+            status=[
+                MagicMtg("Feint", 10, 0.95),
+                PhysicMtg("Feint", 10, 0.9, display=False),
+            ]
         )
 
     @selfSkill
@@ -54,10 +57,11 @@ class Ninja(MeleeDPS):
     def ShadeShift(self, **kwargs) -> Record:
         return self._buildRecord(status=maxHpShield("ShadeShift", 20, 20))
 
+
 class Reaper(MeleeDPS):
-    def __init__(self,hp: int, potency: float) -> None:
-        super().__init__("Reaper",  hp, potency, 0.73)
-        
+    def __init__(self, hp: int, potency: float) -> None:
+        super().__init__("Reaper", hp, potency, 0.73)
+
     @selfSkill
     def ArcaneCrest(self, **kwargs) -> Record:
         # TODO: 未添加hot

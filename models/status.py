@@ -10,11 +10,12 @@ from random import random
 class EventType(Enum):
     TrueHeal = 0  # 快照后的治疗
     Heal = 1  # 普通治疗
-    GroundHeal = 2  # 特殊治疗, 吃施法者快照但目标身上实时判定
-    PhysicDmg = 3  # 物理伤害
-    MagicDmg = 4  # 魔法伤害
-    TrueDamage = 5  # dot伤害
-    MaxHpChange = 6  # 关于最大生命值的变动事件
+    GroundHeal = 2  # 从罩子每一跳中获得的治疗，需计算目标身上buff
+    GroundInit = 3  # 罩子放下时的事件，需计算施法者身上的快照
+    PhysicDmg = 4  # 物理伤害
+    MagicDmg = 5  # 魔法伤害
+    TrueDamage = 6  # dot伤害
+    MaxHpChange = 7  # 关于最大生命值的变动事件
 
 
 @dataclass
@@ -113,8 +114,8 @@ class Hot(BaseStatus):
     getSnapshot: bool = True
 
     def __post_init__(self):
-        self.remainTime: float = self.duration
-        self.isGround: bool = False
+        super().__post_init__()
+        self.isGround = False
         self.timer: Timer = Timer(self.interval)
 
     def update(self, timeInterval: float, **kwargs) -> StatusRtn | None:
