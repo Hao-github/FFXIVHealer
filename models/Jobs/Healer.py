@@ -38,10 +38,10 @@ class Scholar(Healer):
         self.critNum: float = 1.6
 
     def asEventUser(self, event: Event) -> Event:
-        if event.name == "Deployment" and (s := event.target.removeStatus("Galvanize")):
-            return super().asEventUser(
-                Event(EventType.TrueHeal, "Deployment", event.user, allPlayer, 0, [s])
-            )
+        if event.nameIs("DeploymentTactics"):
+            if s := event.target.removeStatus("Galvanize"):
+                e = Event(EventType.TrueHeal, event.name, event.user, allPlayer, 0, [s])
+                return super().asEventUser(e)
         event = self.__dealWithRct(event)
         event = self.__dealWithET(event)
         return super().asEventUser(event)
@@ -64,7 +64,7 @@ class Scholar(Healer):
         return self._buildRecord(status=SpellBonus("Dissipation", 30, 1.2))
 
     @targetSkill
-    def Deployment(self, **kwargs) -> Record:
+    def DeploymentTactics(self, **kwargs) -> Record:
         return self._buildRecord()
 
     @selfSkill
@@ -146,22 +146,18 @@ class Scholar(Healer):
 
 class WhiteMage(Healer):
     aoeSpell: list[str] = ["Medica", "MedicaII", "CureIII", "AfflatusRapture"]
+    singleSpell: list[str] = ["Cure", "CureII", "Regen", "AfflatusSolace"]
 
     def __init__(self, hp: int, potency: float) -> None:
-        super().__init__(
-            "WhiteMage",
-            hp,
-            potency,
-            ["Cure", "CureII", "Regen", "AfflatusSolace"] + self.aoeSpell,
-        )
+        super().__init__("WhiteMage", hp, potency, self.singleSpell + self.aoeSpell)
 
     def asEventUser(self, event: Event) -> Event:
         if event.name in self.aoeSpell and self.searchStatus("PlenaryIndulgence"):
             event.value += 200
-        elif event.name == "closeTheBell":
+        elif event.nameIs("closeTheBell"):
             if e := self.searchStatus("LiturgyOfTheBell"):
                 e.remainTime = 0
-        elif event.name == "BellEnd":
+        elif event.nameIs("BellEnd"):
             event.target = allPlayer
         return super().asEventUser(event)
 
@@ -255,19 +251,16 @@ class WhiteMage(Healer):
 
 
 class Sage(Healer):
+    spellList = [
+        "Dignosis",
+        "Prognosis",
+        "EkurasianDignosis",
+        "EkurasianPrognosis",
+        "Pneuma",
+    ]
+
     def __init__(self, hp: int, potency: float) -> None:
-        super().__init__(
-            "Sage",
-            hp,
-            potency,
-            [
-                "Dignosis",
-                "Prognosis",
-                "EkurasianDignosis",
-                "EkurasianPrognosis",
-                "Pneuma",
-            ],
-        )
+        super().__init__("Sage", hp, potency, self.spellList)
 
     def asEventUser(self, event: Event) -> Event:
         if self.removeStatus("Zoe"):

@@ -49,6 +49,9 @@ class Event:
     def append(self, status: BaseStatus) -> None:
         self.statusList.append(status)
 
+    def nameIs(self, name: str) -> bool:
+        return self.name == name
+
     @staticmethod
     def fromRow(row: pd.Series, user: "Player", target: "Player") -> Event:
         return Event(
@@ -57,11 +60,13 @@ class Event:
             value=row["damage"],
             user=user,
             target=target,
-            statusList=[Dot(row["name"], float(row["dotTime"]), float(row["dotDamage"]))]
+            statusList=[Dot(row["name"], row["dotTime"], row["dotDamage"])]
             if row["hasDot"]
             else [],
         )
 
     @staticmethod
     def fromStatusRtn(s: StatusRtn, user: "Player", target: "Player") -> Event:
-        return Event(s.eventType, s.name, user, target, s.value)
+        return Event(
+            s.eventType, s.name, user, target, s.value, [s.status] if s.status else []
+        )

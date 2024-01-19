@@ -31,11 +31,11 @@ class Dancer(RangedDPS):
         super().__init__("Dancer", hp, potency)
 
     def Improvisation(self, **kwargs) -> Record:
-        duration: int = min(4, int(kwargs.get("stack", 0)) // 3)
+        stack: int = min(4, int(kwargs.get("duration", 0)) // 3)
         return self._buildRecord(
             status=[
-                maxHpShield("Improvisation", 30, self.stackList[duration]),
-                Hot("Improvisation", 15 + duration, 100),
+                maxHpShield("ImprovisationShield", 30, self.stackList[stack]),
+                Hot("ImprovisationHot", 15 + stack * 3, 100),
             ],
         )
 

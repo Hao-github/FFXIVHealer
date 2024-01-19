@@ -1,4 +1,4 @@
-from models.status import HealBonus, Hot, MagicMtg, PhysicMtg
+from models.status import DelayHeal, HealBonus, Hot, MagicMtg, PhysicMtg, maxHpShield
 from models.decorator import petSkill, targetSkill
 from models.player import Player
 from models.record import Record
@@ -42,4 +42,14 @@ class Summoner(MagicDPS):
 
     @petSkill
     def Rekindle(self, **kwargs) -> Record:
-        return self._buildRecord(value=400)
+        return self._buildRecord(
+            value=400, status=DelayHeal("Rekindle", 30, isRekindle=True)
+        )
+
+
+class BlackMage(MagicDPS):
+    def __init__(self, hp: int, potency: float) -> None:
+        super().__init__("BlackMage", hp, potency)
+
+    def Manaward(self, **kwargs) -> Record:
+        return self._buildRecord(status=maxHpShield("Manaward", 20, 30))

@@ -36,7 +36,7 @@ class Paladin(Tank):
         super().__init__("Paladin", hp, potency)
 
     def asEventUser(self, event: Event) -> Event:
-        if event.name == "Intervention":
+        if event.nameIs("Intervention"):
             if self.searchStatus("Rampart") or self.searchStatus("Vengeance"):
                 event.append(Mtg("Intervention", 8, 0.8))
             else:
@@ -46,7 +46,7 @@ class Paladin(Tank):
     def DivineVeil(self, **kwargs) -> Record:
         return self._buildRecord(
             value=400,
-            status=Shield("DivineVeil", 30, self.maxHp // (self.potency * 10)),
+            status=Shield("DivineVeil", 30, self.maxHp // 10, False),
         )
 
     def PassageOfArms(self, **kwargs) -> Record:
@@ -82,7 +82,7 @@ class Warrior(Tank):
         super().__init__("Warrior", hp, potency)
 
     def asEventUser(self, event: Event) -> Event:
-        if event.name == "ShakeItOff":
+        if event.nameIs("ShakeItOff"):
             event.append(maxHpShield("ShakeItOffShield", 30, self.__checkDefense()))
         return super().asEventUser(event)
 
@@ -143,9 +143,9 @@ class GunBreaker(Tank):
         super().__init__("GunBreaker", hp, potency)
 
     def asEventUser(self, event: Event) -> Event:
-        if event.name == "HeartOfCorundum" and event.target != self:
+        if event.nameIs("HeartOfCorundum") and event.target != self:
             event.append(Shield("Brutal", 30, 200))
-        elif event.name == "Superbolide":
+        elif event.nameIs("Superbolide"):
             self.hp = 1
         return super().asEventUser(event)
 

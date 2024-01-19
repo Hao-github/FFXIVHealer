@@ -43,8 +43,7 @@ class Fight:
                     for event in record.eventList:
                         if a := event.target.dealWithReadyEvent(event):
                             cls.recordQueue.push(time, Record([a]))
-                    if record.display:
-                        cls.showInfo(time, record.eventList[0])
+                    cls.showInfo(time, record.eventList[0])
 
                 if cls.recordQueue.empty():
                     return
@@ -67,9 +66,11 @@ class Fight:
 
     @classmethod
     def showInfo(cls, time: float, event: Event):
-        if event.name == "naturalHeal":
+        if event.nameIs("naturalHeal"):
             return
-        cls.output.write("After Event {0} At {1}\n".format(event.name, time))
+        cls.output.write(
+            "After Event {0} At {1}\n".format(event.name, cls.__fromTimestamp(time))
+        )
         for name, player in cls.playerList.items():
             cls.output.write("{0}-{1}".format(name, str(player)))
 
@@ -100,3 +101,11 @@ class Fight:
         m, s = rawTime.strip().split(":")
         ret = int(m) * 60 + float(s)
         return ret if not negative else -ret
+
+    @staticmethod
+    def __fromTimestamp(rawTime: float) -> str:
+        begin = ""
+        if rawTime < 0:
+            begin = "-"
+            rawTime = -rawTime
+        return "{0}{1}:{2}".format(begin, int(rawTime // 60), round(rawTime % 60, 3))

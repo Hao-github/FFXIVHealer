@@ -22,6 +22,7 @@ class StatusRtn:
     eventType: EventType
     name: str
     value: float
+    status: BaseStatus | None = None
 
 
 @dataclass
@@ -30,6 +31,7 @@ class BaseStatus:
     duration: float = field(compare=False)
     value: float = field(compare=False, default=0)
     getSnapshot: bool = field(compare=False, default=False)
+    display: bool = True
 
     def __post_init__(self):
         self.remainTime = self.duration
@@ -129,12 +131,17 @@ class Hot(BaseStatus):
 class DelayHeal(BaseStatus):
     trigger: float = 0.5
     getSnapshot: bool = True
+    # 专为不死鸟帽写的属性
+    isRekindle: bool = False
 
     def update(self, timeInterval: float, hpPercentage: float) -> StatusRtn | None:
         super().update(timeInterval)
         if self.remainTime <= 0 or hpPercentage < self.trigger:
             self.remainTime = 0
-            return StatusRtn(EventType.TrueHeal, self.name, self.value)
+            ret = StatusRtn(EventType.TrueHeal, self.name, self.value)
+            if self.isRekindle:
+                ret.status = Hot("Rekindle", 15, self.value / 2)
+            return ret
 
 
 @dataclass

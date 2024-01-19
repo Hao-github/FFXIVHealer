@@ -30,9 +30,9 @@ class Player:
         self.maxHp: int = hp
         self.hp: int = hp
         self.statusList: list[BaseStatus] = [
-            Hot("naturalHeal", 10000, hp / 100, getSnapshot=False),
-            MagicMtg("magicDefense", 10000, magicDefense),
-            PhysicMtg("physicDefense", 10000, physicDefense),
+            Hot("naturalHeal", 10000, hp / 100, getSnapshot=False, display=False),
+            MagicMtg("magicDefense", 10000, magicDefense, display=False),
+            PhysicMtg("physicDefense", 10000, physicDefense, display=False),
         ]
         self.potency: float = potency
         self.isSurvival: bool = True
@@ -134,7 +134,7 @@ class Player:
         list(map(lambda status: self.getStatus(status), event.statusList))
         # 对于治疗事件
         if event.eventType.value < 3:
-            if event.name == "Pepsis":
+            if event.nameIs("Pepsis"):
                 if self.removeStatus("EkurasianDignosis"):
                     event.getBuff(1.4)
                 elif not self.removeStatus("EkurasianPrognosis"):
@@ -187,11 +187,7 @@ class Player:
             self.name,
             str(self.hp),
             str(self.maxHp),
-            ", ".join(
-                str(i)
-                for i in self.statusList
-                if i.name not in ["naturalHeal", "magicDefense", "physicDefense"]
-            ),
+            ", ".join(str(i) for i in self.statusList if i.display),
         )
 
 
