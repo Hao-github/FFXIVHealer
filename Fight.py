@@ -3,12 +3,15 @@ import pandas as pd
 from models.player import allPlayer, Player
 from models.event import Event
 from models.record import RecordQueue, Record
+from pyecharts.charts import Timeline, Bar
+import pyecharts.options as opts
 
 
 class Fight:
     playerList: dict[str, Player] = {}
     recordQueue: RecordQueue = RecordQueue()
     output = open("output.txt", "w", encoding="utf-8")
+    timeline = Timeline()
     boss = Player("boss", 0, 0, 0, 0)
 
     @classmethod
@@ -48,6 +51,8 @@ class Fight:
                     cls.showInfo(time, record.eventList[0])
 
                 if cls.recordQueue.empty():
+                    
+                    cls.timeline.render()
                     return
 
             time += step
@@ -70,11 +75,38 @@ class Fight:
     def showInfo(cls, time: float, event: Event):
         if event.nameIs("naturalHeal"):
             return
-        cls.output.write(
-            "After Event {0} At {1}\n".format(event.name, cls.__fromTimestamp(time))
-        )
+        cls.output.write(f"After Event {event.name} At {cls.__fromTimestamp(time)}\n")
         for name, player in cls.playerList.items():
-            cls.output.write("{0}-{1}".format(name, str(player)))
+            cls.output.write(f"{name}-{str(player)}")
+        bar = (
+            Bar(init_opts=opts.InitOpts(width="900px", height="500px"))
+            .add_xaxis(
+                list(map(lambda x: f"{x[0]}-{x[1].name}", cls.playerList.items())),
+            )
+            .add_yaxis(
+                "hp",
+                list(map(lambda x: x.hp, cls.playerList.values())),
+                label_opts=opts.LabelOpts(position="top"),
+            )
+            .add_yaxis(
+                "maxHp",
+                list(map(lambda x: x.maxHp, cls.playerList.values())),
+                label_opts=opts.LabelOpts(is_show=False),
+                gap="-100%",
+                z=-1,
+                itemstyle_opts=opts.ItemStyleOpts(color="rgba(255, 0, 0, 0.5)"),
+            )
+            .set_global_opts(
+                xaxis_opts=opts.AxisOpts(
+                    splitline_opts=opts.SplitLineOpts(is_show=False),
+                    axislabel_opts={"rotate":-10}
+                ),
+                yaxis_opts=opts.AxisOpts(
+                    splitline_opts=opts.SplitLineOpts(is_show=False)
+                ),
+            )
+        )
+        cls.timeline.add(bar, f"{event.name} At {cls.__fromTimestamp(time)}\n")
 
     @classmethod
     def __rowToPlayer(cls, row: pd.Series):

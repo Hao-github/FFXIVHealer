@@ -7,3 +7,4 @@ output.txt
 main.spec
 /dist
 /build
+/render.html
