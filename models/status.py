@@ -1,6 +1,7 @@
 """
 模拟buff和debuff的模型的文件
 """
+
 from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
@@ -41,7 +42,7 @@ class BaseStatus:
         self.remainTime -= timeInterval
 
     def __str__(self) -> str:
-        return "{0}: {1}s".format(self.name, str(round(self.remainTime, 2)))
+        return f"{self.name}: {round(self.remainTime, 2)}s"
 
     def __lt__(self, __value: BaseStatus) -> bool:
         return self.value < __value.value
@@ -112,6 +113,7 @@ class Dot(BaseStatus):
 class Hot(BaseStatus):
     interval: float = 3
     getSnapshot: bool = True
+    until: float = 999999
 
     def __post_init__(self):
         super().__post_init__()
@@ -120,6 +122,8 @@ class Hot(BaseStatus):
 
     def update(self, timeInterval: float, **kwargs) -> StatusRtn | None:
         super().update(timeInterval)
+        if kwargs.get("hp", 0) > self.until:
+            self.remainTime = 0
         if self.timer.update(timeInterval):
             return StatusRtn(
                 EventType.GroundHeal if self.isGround else EventType.TrueHeal,
@@ -167,23 +171,23 @@ class HaimaShield(Shield):
         self.originValue *= percentage
         return super().getBuff(percentage)
 
-    # def update(self, timeInterval: float, **kwargs) -> Event | None:
-    #     super().update(timeInterval)
-    #     self.stackTime -= timeInterval
-    #     # 检测到海马时间已过
-    #     if self.stackTime <= 0:
-    #         ret = Event(
-    #             EventType.TrueHeal,
-    #             self.name,
-    #             self.originValue * self.stack / 2,
-    #             status=Shield(self.name, self.remainTime, self.value),
-    #         )
-    #         return ret
-    #     # 检测到海马盾已破
-    #     if self.value <= 0 and self.stack > 0:
-    #         self.stack -= 1
-    #         self.remainTime = self.duration
-    #         self.value = self.originValue
+    def update(self, timeInterval: float, **kwargs) -> StatusRtn | None:
+        super().update(timeInterval)
+        self.stackTime -= timeInterval
+        # 检测到海马时间已过
+        if self.stackTime <= 0:
+            ret = StatusRtn(
+                EventType.TrueHeal,
+                self.name,
+                self.originValue * self.stack / 2,
+                status=Shield(self.name, self.remainTime, self.value),
+            )
+            return ret
+        # 检测到海马盾已破
+        if self.value <= 0 and self.stack > 0:
+            self.stack -= 1
+            self.remainTime = self.duration
+            self.value = self.originValue
 
 
 @dataclass

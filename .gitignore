@@ -8,3 +8,5 @@ main.spec
 /dist
 /build
 /render.html
+/pyproject.toml
+/tests/

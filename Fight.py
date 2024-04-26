@@ -1,18 +1,15 @@
 from functools import reduce
 import pandas as pd
+from models.evaluation import Evaluation
 from models.player import allPlayer, Player
 from models.event import Event
 from models.record import RecordQueue, Record
-from pyecharts.charts import Timeline, Bar
-import pyecharts.options as opts
+from report.output import Output
 
 
 class Fight:
-    playerList: dict[str, Player] = {}
+    member: dict[str, Player] = {}
     recordQueue: RecordQueue = RecordQueue()
-    output = open("output.txt", "w", encoding="utf-8")
-    timeline = Timeline()
-    boss = Player("boss", 0, 0, 0, 0)
 
     @classmethod
     def addbaseCofig(cls, excelFile: str) -> None:
@@ -22,37 +19,32 @@ class Fight:
         for r in dfDict["奶轴"].merge(dfDict["技能"], on="name").to_dict("records"):
             cls.recordQueue.push(
                 cls.__toTimestamp(r["time"]),
-                getattr(Fight.playerList[r["user"]], r["skillName"])(**r),
+                getattr(Fight.member[r["user"]], r["skillName"])(**r),
             )
 
     @classmethod
     def run(cls, step: float):
-        if not cls.playerList or cls.recordQueue.empty():
+        if not cls.member or cls.recordQueue.empty():
             return
         time: float = -3
         while True:
             # 检查buff, 如果dot和hot跳了, 或者延迟治疗时间到了, 就产生立即的prepare事件
-
-            if x := reduce(
-                lambda x, y: x + y.update(step), cls.playerList.values(), []
-            ):
-                cls.recordQueue.push(time, Record(x, display=False))
+            if x := reduce(lambda x, y: x + y.update(step), cls.member.values(), []):
+                cls.recordQueue.push(time, Record(x, fromHot=False))
             # 如果当前时间大于等于最近的事件的发生时间
             while time >= cls.recordQueue.nextRecordTime:
                 record = cls.recordQueue.pop()
                 if not record.prepared:
-                    if time > 31.1:
-                        pass
                     cls.recordQueue.push(time + record.delay, cls.forUnprepared(record))
                 else:
-                    for event in record.eventList:
-                        if a := event.target.dealWithReadyEvent(event):
-                            cls.recordQueue.push(time, Record([a]))
+                    Evaluation.update(record)
+                    cls.forPrepared(record, time)
+                    Output.addSnapshot(time, cls.member)
                     cls.showInfo(time, record.eventList[0])
 
                 if cls.recordQueue.empty():
-                    
-                    cls.timeline.render()
+                    Output.showBar()
+                    Output.showLine()
                     return
 
             time += step
@@ -66,60 +58,45 @@ class Fight:
             if event.target != allPlayer:
                 newEventList.append(event.target.asEventTarget(event))
             else:
-                for player in cls.playerList.values():
+                for player in cls.member.values():
                     newEventList.append(player.asEventTarget(event.copy(player)))
         record.eventList = newEventList
         return record
 
     @classmethod
+    def forPrepared(cls, record: Record, time: float) -> None:
+        for event in record.eventList:
+            ret = event.target.dealWithReadyEvent(event)
+            match ret:
+                case False:
+                    Output.info(f"{event.target}可能会或已经在{round(time, 2)}死亡")
+                case True:
+                    pass
+                case _:
+                    cls.recordQueue.push(time, Record([ret]))
+
+    @classmethod
     def showInfo(cls, time: float, event: Event):
         if event.nameIs("naturalHeal"):
             return
-        cls.output.write(f"After Event {event.name} At {cls.__fromTimestamp(time)}\n")
-        for name, player in cls.playerList.items():
-            cls.output.write(f"{name}-{str(player)}")
-        bar = (
-            Bar(init_opts=opts.InitOpts(width="900px", height="500px"))
-            .add_xaxis(
-                list(map(lambda x: f"{x[0]}-{x[1].name}", cls.playerList.items())),
-            )
-            .add_yaxis(
-                "hp",
-                list(map(lambda x: x.hp, cls.playerList.values())),
-                label_opts=opts.LabelOpts(position="top"),
-            )
-            .add_yaxis(
-                "maxHp",
-                list(map(lambda x: x.maxHp, cls.playerList.values())),
-                label_opts=opts.LabelOpts(is_show=False),
-                gap="-100%",
-                z=-1,
-                itemstyle_opts=opts.ItemStyleOpts(color="rgba(255, 0, 0, 0.5)"),
-            )
-            .set_global_opts(
-                xaxis_opts=opts.AxisOpts(
-                    splitline_opts=opts.SplitLineOpts(is_show=False),
-                    axislabel_opts={"rotate":-10}
-                ),
-                yaxis_opts=opts.AxisOpts(
-                    splitline_opts=opts.SplitLineOpts(is_show=False)
-                ),
-            )
-        )
-        cls.timeline.add(bar, f"{event.name} At {cls.__fromTimestamp(time)}\n")
+        eventStr: str = f"{event.name} At {cls.__fromTimestamp(time)}"
+        Output.info(f"After Event {eventStr}\n")
+        for name, player in cls.member.items():
+            Output.info(f"{name}-{str(player)}")
+        Output.addBar(eventStr, cls.member)
 
     @classmethod
     def __rowToPlayer(cls, row: pd.Series):
         jobClass = getattr(__import__("models.Jobs." + row["class"]), row["job"])
-        cls.playerList[row["name"]] = jobClass(row["hp"], row["potency"])
+        cls.member[row["name"]] = jobClass(row["hp"], row["damagePerPotency"])
         return 0
 
     @classmethod
     def __rowToBossRecord(cls, row: pd.Series):
         event = Event.fromRow(
             row,
-            cls.boss,
-            allPlayer if row["target"] == "all" else cls.playerList[row["target"]],
+            Player("boss", 0, 0, 0, 0),
+            allPlayer if row["target"] == "all" else cls.member[row["target"]],
         )
         cls.recordQueue.push(
             cls.__toTimestamp(row["prepareTime"]), Record([event], delay=row["delay"])
@@ -142,4 +119,4 @@ class Fight:
         if rawTime < 0:
             begin = "-"
             rawTime = -rawTime
-        return "{0}{1}:{2}".format(begin, int(rawTime // 60), round(rawTime % 60, 3))
+        return f"{begin}{int(rawTime // 60)}:{round(rawTime % 60, 3)}"

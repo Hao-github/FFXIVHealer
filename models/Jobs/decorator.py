@@ -18,7 +18,7 @@ def targetSkill(func):
     def wrapper(self, *args, **kwargs):
         ret: Record = func(self, *args, **kwargs)
         event = ret.eventList[0]
-        event.target = Fight.Fight.playerList.get(kwargs.get("target", None), self)
+        event.target = Fight.Fight.member.get(kwargs.get("target", None), self)
         return ret
 
     return wrapper
@@ -44,3 +44,15 @@ def selfSkill(func):
         return ret
 
     return wrapper
+
+
+def cost(costType: str):
+    def costCal(func):
+        def wrapper(self, *args, **kwargs):
+            ret: Record = func(self, *args, **kwargs)
+            ret.cost = getattr(self, costType+"Potency")
+            return ret
+
+        return wrapper
+
+    return costCal

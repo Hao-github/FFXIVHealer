@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>温度变化图表</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.0/echarts.min.js"></script>
+    <style>
+        /* 样式调整 */
+        #additional-info {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 温度变化图表容器 -->
+    <div id="temperature_chart" style="width: 600px; height: 400px;"></div>
+
+    <!-- 额外信息容器 -->
+    <div id="additional-info">在这里显示额外信息</div>
+
+    <p id="page1"></p>
+
+    <script type="text/javascript" src="js/jquery.min.js"></script>
+    <script>
+        // 在图表渲染后添加鼠标悬停事件
+        $("#page1").load("temperature_change_line_chart.html");
+        var chart = echarts.init(document.getElementById('temperature_chart'));
+        chart.on('mouseover', function (params) {
+            // 根据鼠标悬停的信息更新额外信息容器的内容
+            var additionalInfoElement = document.getElementById('additional-info');
+            additionalInfoElement.textContent = '额外信息: ' + params.value;
+        });
+    </script>
+</body>
+
+</html>

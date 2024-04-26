@@ -35,15 +35,10 @@ class Event:
         return self
 
     def __str__(self) -> str:
-        return "{0} do {1}({2}) on {3}, value: {4}{5}".format(
-            self.user.name,
-            self.name,
-            self.eventType.name,
-            self.target.name,
-            str(self.value),
-            ", statusList:[{0}]".format(", ".join((str(i) for i in self.statusList)))
-            if self.statusList
-            else "",
+        return (
+            f"{self.user.name} do {self.name}({self.eventType.name}) on {self.target.name}"
+            f", value: {str(self.value)}"
+            f", statusList:[{5}{', '.join((str(i) for i in self.statusList))}]"
         )
 
     def append(self, status: BaseStatus) -> None:

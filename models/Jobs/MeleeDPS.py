@@ -1,4 +1,4 @@
-from models.decorator import selfSkill
+from models.Jobs.decorator import selfSkill
 from models.status import HealBonus, MagicMtg, Mtg, PhysicMtg, maxHpShield
 from models.player import Player
 from models.record import Record
@@ -6,9 +6,9 @@ from models.record import Record
 
 class MeleeDPS(Player):
     def __init__(
-        self, name: str, hp: int, potency: float, physicDefense: float = 0.78
+        self, name: str, hp: int, damagePerPotency: float, physicDefense: float = 0.78
     ) -> None:
-        super().__init__(name, hp, potency, physicDefense, 0.78)
+        super().__init__(name, hp, damagePerPotency, physicDefense, 0.78)
 
     def Feint(self, **kwargs) -> Record:
         return self._buildRecord(
@@ -24,8 +24,8 @@ class MeleeDPS(Player):
 
 
 class Monk(MeleeDPS):
-    def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("Monk", hp, potency)
+    def __init__(self, hp: int, damagePerPotency: float) -> None:
+        super().__init__("Monk", hp, damagePerPotency)
 
     @selfSkill
     def RiddleOfEarth(self, **kwargs) -> Record:
@@ -36,13 +36,13 @@ class Monk(MeleeDPS):
 
 
 class Dragoon(MeleeDPS):
-    def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("Dragoon", hp, potency, 0.73)
+    def __init__(self, hp: int, damagePerPotency: float) -> None:
+        super().__init__("Dragoon", hp, damagePerPotency, 0.73)
 
 
 class Samurai(MeleeDPS):
-    def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("Samurai", hp, potency)
+    def __init__(self, hp: int, damagePerPotency: float) -> None:
+        super().__init__("Samurai", hp, damagePerPotency)
 
     @selfSkill
     def ThirdEye(self, **kwargs) -> Record:
@@ -50,8 +50,8 @@ class Samurai(MeleeDPS):
 
 
 class Ninja(MeleeDPS):
-    def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("Ninja", hp, potency)
+    def __init__(self, hp: int, damagePerPotency: float) -> None:
+        super().__init__("Ninja", hp, damagePerPotency)
 
     @selfSkill
     def ShadeShift(self, **kwargs) -> Record:
@@ -59,8 +59,8 @@ class Ninja(MeleeDPS):
 
 
 class Reaper(MeleeDPS):
-    def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("Reaper", hp, potency, 0.73)
+    def __init__(self, hp: int, damagePerPotency: float) -> None:
+        super().__init__("Reaper", hp, damagePerPotency, 0.73)
 
     @selfSkill
     def ArcaneCrest(self, **kwargs) -> Record:

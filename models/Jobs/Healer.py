@@ -1,6 +1,12 @@
 from functools import reduce
 from models.status import Bell, EventType
-from models.decorator import groundSkill, petSkill, selfSkill, targetSkill
+from models.Jobs.decorator import (
+    cost,
+    groundSkill,
+    petSkill,
+    selfSkill,
+    targetSkill,
+)
 from models.status import (
     BaseStatus,
     DelayHeal,
@@ -20,9 +26,14 @@ from models.record import Record
 
 class Healer(Player):
     def __init__(
-        self, name: str, hp: int, potency: float, spellList: list[str]
+        self,
+        name: str,
+        hp: int,
+        damagePerPotency: float,
+        spellList: list[str],
+        gcdPotency: int,
     ) -> None:
-        super().__init__(name, hp, potency, 0.73, 0.84)
+        super().__init__(name, hp, damagePerPotency, 0.73, 0.84, gcdPotency)
         self.spellList: list[str] = spellList
 
     def asEventUser(self, event: Event) -> Event:
@@ -32,14 +43,17 @@ class Healer(Player):
 
 
 class Scholar(Healer):
-    def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("Scholar", hp, potency, ["Adloquium", "Succor", "Physick"])
+    def __init__(self, hp: int, damagePerPotency: float) -> None:
+        super().__init__(
+            "Scholar", hp, damagePerPotency, ["Adloquium", "Succor", "Physick"], 295
+        )
         self.petCoefficient: float = 0.95
         self.critNum: float = 1.6
+        self.etherPotency: int = 100
 
     def asEventUser(self, event: Event) -> Event:
         if event.nameIs("DeploymentTactics"):
-            if s := event.target.removeStatus("Galvanize"):
+            if s := event.target.removeShield("Galvanize"):
                 e = Event(EventType.TrueHeal, event.name, event.user, allPlayer, 0, [s])
                 return super().asEventUser(e)
         event = self.__dealWithRct(event)
@@ -79,18 +93,22 @@ class Scholar(Healer):
 
     # 单奶
 
+    @cost("gcd")
     @targetSkill
     def Physick(self, **kwargs) -> Record:
         return self._buildRecord(value=450)
 
+    @cost("gcd")
     @targetSkill
     def Adloquium(self, **kwargs) -> Record:
         return self._buildRecord(value=300, status=Shield("Galvanize", 30, 540))
 
+    @cost("ether")
     @targetSkill
     def Lustrate(self, **kwargs) -> Record:
         return self._buildRecord(value=600)
 
+    @cost("ether")
     @targetSkill
     def Excogitation(self, **kwargs) -> Record:
         return self._buildRecord(status=DelayHeal("Excogitation", 45, 800))
@@ -110,6 +128,7 @@ class Scholar(Healer):
     def WhisperingDawn(self, **kwargs) -> Record:
         return self._buildRecord(status=Hot("WhisperingDawn", 21, 80))
 
+    @cost("gcd")
     def Succor(self, **kwargs) -> Record:
         return self._buildRecord(value=200, status=Shield("Galvanize", 30, 320))
 
@@ -122,6 +141,7 @@ class Scholar(Healer):
             ]
         )
 
+    @cost("ether")
     @groundSkill
     def SacredSoil(self, **kwargs) -> Record:
         return self._buildRecord(
@@ -129,6 +149,7 @@ class Scholar(Healer):
             status=[Mtg("SacredSoil", 17, 0.9), Hot("SacredSoil", 15, 100)],
         )
 
+    @cost("ether")
     def Indomitability(self, **kwargs) -> Record:
         return self._buildRecord(value=400)
 
@@ -148,8 +169,10 @@ class WhiteMage(Healer):
     aoeSpell: list[str] = ["Medica", "MedicaII", "CureIII", "AfflatusRapture"]
     singleSpell: list[str] = ["Cure", "CureII", "Regen", "AfflatusSolace"]
 
-    def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("WhiteMage", hp, potency, self.singleSpell + self.aoeSpell)
+    def __init__(self, hp: int, damagePerPotency: float) -> None:
+        super().__init__(
+            "WhiteMage", hp, damagePerPotency, self.singleSpell + self.aoeSpell, 310
+        )
 
     def asEventUser(self, event: Event) -> Event:
         if event.name in self.aoeSpell and self.searchStatus("PlenaryIndulgence"):
@@ -166,24 +189,28 @@ class WhiteMage(Healer):
         """全大赦"""
         return self._buildRecord(status=BaseStatus("PlenaryIndulgence", 10))
 
-    def dealWithReadyEvent(self, event: Event) -> Event | None:
-        super().dealWithReadyEvent(event)
+    def dealWithReadyEvent(self, event: Event) -> Event | bool:
+        ret = super().dealWithReadyEvent(event)
         if event.eventType.value < 4:
-            return
+            return ret
         if bell := self.searchStatus("LiturgyOfTheBell"):
             if isinstance(bell, Bell) and (ret := bell.getHeal()):
                 return Event.fromStatusRtn(ret, self, allPlayer)
+        return True
 
     # 单奶
 
+    @cost("gcd")
     @targetSkill
     def Cure(self, **kwargs) -> Record:
         return self._buildRecord(value=500)
 
+    @cost("gcd")
     @targetSkill
     def CureII(self, **kwargs) -> Record:
         return self._buildRecord(value=800)
 
+    @cost("gcd")
     @targetSkill
     def Regen(self, **kwargs) -> Record:
         return self._buildRecord(status=Hot("Regen", 18, 250))
@@ -208,6 +235,7 @@ class WhiteMage(Healer):
     def Aquaveil(self, **kwargs) -> Record:
         return self._buildRecord(status=Mtg("Aquaveil", 8, 0.85))
 
+    @cost("gcd")
     def Medica(self, **kwargs) -> Record:
         """医治"""
         return self._buildRecord(value=400)
@@ -216,10 +244,12 @@ class WhiteMage(Healer):
         """狂喜之心"""
         return self._buildRecord(value=400)
 
+    @cost("gcd")
     def CureIII(self, **kwargs) -> Record:
         """愈疗"""
         return self._buildRecord(value=600)
 
+    @cost("gcd")
     def MedicaII(self, **kwargs) -> Record:
         """医济"""
         return self._buildRecord(value=250, status=Hot("MedicaII", 15, 150))
@@ -259,18 +289,20 @@ class Sage(Healer):
         "Pneuma",
     ]
 
-    def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("Sage", hp, potency, self.spellList)
+    def __init__(self, hp: int, damagePerPotency: float) -> None:
+        super().__init__("Sage", hp, damagePerPotency, self.spellList, 330)
 
     def asEventUser(self, event: Event) -> Event:
         if self.removeStatus("Zoe"):
             event.getBuff(1.5)
         return super().asEventUser(event)
 
+    @cost("gcd")
     @targetSkill
     def Dignosis(self, **kwargs) -> Record:
         return self._buildRecord(value=450)
 
+    @cost("gcd")
     def Prognosis(self, **kwargs) -> Record:
         return self._buildRecord(value=300)
 
@@ -279,10 +311,12 @@ class Sage(Healer):
             status=[Hot("PhysisII", 15, 130), HealBonus("PhysisII", 10, 1.1)]
         )
 
+    @cost("gcd")
     @targetSkill
     def EkurasianDignosis(self, **kwargs) -> Record:
         return self._buildRecord(value=300, status=Shield("EkurasianDignosis", 30, 540))
 
+    @cost("gcd")
     def EkurasianPrognosis(self, **kwargs) -> Record:
         return self._buildRecord(
             value=100, status=Shield("EkurasianPrognosis", 30, 320)
@@ -335,13 +369,12 @@ class Sage(Healer):
 #     aoeSpell: list[str] = ["AspectedHelios", "Helios"]
 #     singleSpell: list[str] = ["Benefic", "BeneficII", "AspectedBenefic"]
 
-#     def __init__(self, hp: int, potency: float) -> None:
-#         super().__init__("Astrologian", hp, potency, self.aoeSpell + self.singleSpell)
-#         self.SynastryTarget: Player = self
+#     def __init__(self, hp: int, damagePerPotency: float) -> None:
+#         super().__init__(
+#             "Astrologian", hp, damagePerPotency, self.aoeSpell + self.singleSpell, 250
+#         )
 
-#     def asEventUser(self, event: Event) -> tuple[Event, Player]:
-#         # if event.name == "Synastry":
-#         #     self.SynastryTarget = target
+#     def asEventUser(self, event: Event) -> Event:
 #         if event.name in self.aoeSpell:
 #             if self.searchStatus("NeutralSect"):
 #                 if event.name == "AspectedHelios":
@@ -354,78 +387,60 @@ class Sage(Healer):
 #         #     self.__setStatusZero("Horoscope")
 #         # elif event.name == "Horoscope" and event.eventType == EventType.TrueHeal:
 #         #     # 表示天宫图时间归0, 将天宫图事件转为群奶
-#         #     event.value *= self.potency
+#         #     event.value *= self.damagePerPotency
 #         #     target = allPlayer
-#         return super().asEventUser(event, target)
+#         return super().asEventUser(event)
 
-#     # def dealWithReadyEvent(self, event: Event) -> Record | None:
-#     #     super().dealWithReadyEvent(event)
-#     #     if event.name not in self.singleSpell:
-#     #         return
-#     #     if self.searchStatus("Synastry") and self.SynastryTarget != self:
-#     #         return Record(
-#     #             Event(EventType.TrueHeal, "SynastryHeal", event.value * 0.4),
-#     #             self,
-#     #             self.SynastryTarget,
-#     #         )
-
-#     # def Synastry(self) -> Record:
-#     #     return self.createRecord(target)
-
+#     @targetSkill
 #     def Benefic(self) -> Record:
-#         return self.createRecord(target, value=500)
+#         return self._buildRecord(value=500)
 
+#     @targetSkill
 #     def BeneficII(self) -> Record:
-#         return self.createRecord(target, value=800)
+#         return self._buildRecord(value=800)
 
+#     @targetSkill
 #     def AspectedBenefic(self) -> Record:
-#         return self.createRecord(
-#             target, value=250, status=Hot("AspectedBenefic", 15, 250)
-#         )
+#         return self._buildRecord(value=250, status=Hot("AspectedBenefic", 15, 250))
 
+#     @targetSkill
 #     def CelestialIntersection(self) -> Record:
-#         return self.createRecord(
-#             target, value=200, status=Shield("CelestialIntersection", 30, 400)
+#         return self._buildRecord(
+#             value=200, status=Shield("CelestialIntersection", 30, 400)
 #         )
 
+#     @targetSkill
 #     def Exaltation(self) -> Record:
-#         return self.createRecord(
-#             target,
+#         return self._buildRecord(
 #             status=[Mtg("Exaltation", 8, 0.9), DelayHeal("Exaltation", 8, 500)],
 #         )
 
 #     # 群奶
 
 #     def Helios(self) -> Record:
-#         return self.createRecord(allPlayer, value=400)
+#         return self._buildRecord(value=400)
 
 #     def AspectedHelios(self) -> Record:
-#         return self.createRecord(
-#             allPlayer, value=250, status=Hot("AspectedHelios", 15, 150)
-#         )
+#         return self._buildRecord(value=250, status=Hot("AspectedHelios", 15, 150))
 
 #     def CollectiveUnconscious(self) -> Record:
-#         return self.createRecord(
-#             allPlayer, status=[Mtg("CU", 5, 0.9), Hot("CU", 15, 100)]
-#         )
+#         return self._buildRecord(status=[Mtg("CU", 5, 0.9), Hot("CU", 15, 100)])
 
 #     def CelestialOpposition(self) -> Record:
-#         return self.createRecord(allPlayer, value=200, status=Hot("CO", 15, 100))
+#         return self._buildRecord(value=200, status=Hot("CO", 15, 100))
 
 #     def EarthlyStar(self) -> Record:
-#         return self.createRecord(allPlayer, value=720)
+#         return self._buildRecord(value=720)
 
+#     @selfSkill
 #     def NeutralSect(self) -> Record:
-#         return self.createRecord(self, status=HealBonus("NeutralSect", 20, 1.2))
+#         return self._buildRecord(status=HealBonus("NeutralSect", 20, 1.2))
 
 #     def Horoscope(self) -> Record:
-#         return self.createRecord(self, status=BaseStatus("Horoscope", 10, 200))
-
-#     # def closeHoroscope(self) -> Record:
-#     #     return self.createRecord(self)
+#         return self._buildRecord(status=DelayHeal("Horoscope", 10, 200))
 
 #     def Macrocosmos(self) -> Record:
-#         return self.createRecord(allPlayer, status=DelayHeal("Macrocosmos", 15, 200))
+#         return self._buildRecord(status=DelayHeal("Macrocosmos", 15, 200))
 
-#     def Microcosmos(self) -> Record:
-#         return self.createRecord(allPlayer)
+#     # def Microcosmos(self) -> Record:
+#     #     return self._buildRecord(status=DelayHeal("Horoscope", 10, 250, trigger=-1))

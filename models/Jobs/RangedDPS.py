@@ -1,12 +1,12 @@
-from models.decorator import selfSkill
+from models.Jobs.decorator import selfSkill
 from models.status import Mtg, HealBonus, Hot, maxHpShield
 from models.player import Player
 from models.record import Record
 
 
 class RangedDPS(Player):
-    def __init__(self, name: str, hp: int, potency: float) -> None:
-        super().__init__(name, hp, potency, 0.78, 0.78)
+    def __init__(self, name: str, hp: int, damagePerPotency: float) -> None:
+        super().__init__(name, hp, damagePerPotency, 0.78, 0.78)
 
     def Tactician(self, **kwargs) -> Record:
         return self._buildRecord(status=Mtg("Tactician", 15, 0.9))
@@ -17,8 +17,8 @@ class RangedDPS(Player):
 
 
 class Bard(RangedDPS):
-    def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("Bard", hp, potency)
+    def __init__(self, hp: int, damagePerPotency: float) -> None:
+        super().__init__("Bard", hp, damagePerPotency)
 
     def NaturesMinne(self, **kwargs) -> Record:
         return self._buildRecord(status=HealBonus("NaturesMinne", 15, 1.15))
@@ -27,8 +27,8 @@ class Bard(RangedDPS):
 class Dancer(RangedDPS):
     stackList = [5, 6, 7, 8, 10]
 
-    def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("Dancer", hp, potency)
+    def __init__(self, hp: int, damagePerPotency: float) -> None:
+        super().__init__("Dancer", hp, damagePerPotency)
 
     def Improvisation(self, **kwargs) -> Record:
         stack: int = min(4, int(kwargs.get("duration", 0)) // 3)
@@ -44,8 +44,8 @@ class Dancer(RangedDPS):
 
 
 class Machinist(RangedDPS):
-    def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("Machinist", hp, potency)
+    def __init__(self, hp: int, damagePerPotency: float) -> None:
+        super().__init__("Machinist", hp, damagePerPotency)
 
     def Dismantle(self, **kwargs) -> Record:
         return self._buildRecord(status=Mtg("Dismantle", 10, 0.9))

@@ -1,5 +1,5 @@
 from functools import reduce
-from models.decorator import selfSkill, targetSkill
+from models.Jobs.decorator import selfSkill, targetSkill
 from models.status import (
     BaseStatus,
     DelayHeal,
@@ -14,10 +14,13 @@ from models.event import Event
 from models.player import Player
 from models.record import Record
 
+# class ComboHealingStack:
+
 
 class Tank(Player):
-    def __init__(self, name: str, hp: int, potency: float) -> None:
-        super().__init__(name, hp, potency, 0.48, 0.48)
+    def __init__(self, name: str, hp: int, damagePerPotency: float) -> None:
+        super().__init__(name, hp, damagePerPotency, 0.48, 0.48)
+        self.comboHealingStack: int = 0
 
     def Reprisal(self, **kwargs) -> Record:
         return self._buildRecord(status=Mtg("Reprisal", 10, 0.9))
@@ -32,8 +35,8 @@ class Tank(Player):
 
 
 class Paladin(Tank):
-    def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("Paladin", hp, potency)
+    def __init__(self, hp: int, damagePerPotency: float) -> None:
+        super().__init__("Paladin", hp, damagePerPotency)
 
     def asEventUser(self, event: Event) -> Event:
         if event.nameIs("Intervention"):
@@ -78,8 +81,8 @@ class Paladin(Tank):
 
 
 class Warrior(Tank):
-    def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("Warrior", hp, potency)
+    def __init__(self, hp: int, damagePerPotency: float) -> None:
+        super().__init__("Warrior", hp, damagePerPotency)
 
     def asEventUser(self, event: Event) -> Event:
         if event.nameIs("ShakeItOff"):
@@ -137,10 +140,18 @@ class Warrior(Tank):
     def Holmgang(self, **kwargs) -> Record:
         return self._buildRecord(status=BaseStatus("Holmgang", 10))
 
+    def dealWithReadyEvent(self, event: Event) -> Event | bool:
+        ret = super().dealWithReadyEvent(event)
+        if ret is False and self.searchStatus("Holmgang"):
+            self.hp = 1
+            self.isSurvival = True
+            return True
+        return ret
+
 
 class GunBreaker(Tank):
-    def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("GunBreaker", hp, potency)
+    def __init__(self, hp: int, damagePerPotency: float) -> None:
+        super().__init__("GunBreaker", hp, damagePerPotency)
 
     def asEventUser(self, event: Event) -> Event:
         if event.nameIs("HeartOfCorundum") and event.target != self:
@@ -176,8 +187,8 @@ class GunBreaker(Tank):
 
 
 class DarkKnight(Tank):
-    def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("DarkKnight", hp, potency)
+    def __init__(self, hp: int, damagePerPotency: float) -> None:
+        super().__init__("DarkKnight", hp, damagePerPotency)
 
     def DarkMissionary(self, **kwargs) -> Record:
         return self._buildRecord(status=MagicMtg("DarkMissionary", 15, 0.9))
@@ -197,3 +208,11 @@ class DarkKnight(Tank):
     @selfSkill
     def LivingDead(self, **kwargs) -> Record:
         return self._buildRecord(status=BaseStatus("LivingDead", 10))
+    
+    def dealWithReadyEvent(self, event: Event) -> Event | bool:
+        ret = super().dealWithReadyEvent(event)
+        if ret is False and self.searchStatus("LivingDead"):
+                self.hp = 1
+                self.isSurvival = True
+                return True
+        return ret

@@ -1,12 +1,12 @@
 from models.status import DelayHeal, HealBonus, Hot, MagicMtg, PhysicMtg, maxHpShield
-from models.decorator import petSkill, targetSkill
+from models.Jobs.decorator import petSkill, targetSkill
 from models.player import Player
 from models.record import Record
 
 
 class MagicDPS(Player):
-    def __init__(self, name: str, hp: int, potency: float) -> None:
-        super().__init__(name, hp, potency, 0.73, 0.84)
+    def __init__(self, name: str, hp: int, damagePerPotency: float) -> None:
+        super().__init__(name, hp, damagePerPotency, 0.73, 0.84)
 
     def Addle(self, **kwargs) -> Record:
         return self._buildRecord(
@@ -18,8 +18,8 @@ class MagicDPS(Player):
 
 
 class RedMage(MagicDPS):
-    def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("RedMage", hp, potency)
+    def __init__(self, hp: int, damagePerPotency: float) -> None:
+        super().__init__("RedMage", hp, damagePerPotency)
 
     def MagickBarrier(self, **kwargs) -> Record:
         return self._buildRecord(
@@ -35,8 +35,8 @@ class RedMage(MagicDPS):
 
 
 class Summoner(MagicDPS):
-    def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("Summoner", hp, potency)
+    def __init__(self, hp: int, damagePerPotency: float) -> None:
+        super().__init__("Summoner", hp, damagePerPotency)
         self.petCoefficient: float = 0.95
 
     @petSkill
@@ -51,8 +51,8 @@ class Summoner(MagicDPS):
 
 
 class BlackMage(MagicDPS):
-    def __init__(self, hp: int, potency: float) -> None:
-        super().__init__("BlackMage", hp, potency)
+    def __init__(self, hp: int, damagePerPotency: float) -> None:
+        super().__init__("BlackMage", hp, damagePerPotency)
 
     def Manaward(self, **kwargs) -> Record:
         return self._buildRecord(status=maxHpShield("Manaward", 20, 30))

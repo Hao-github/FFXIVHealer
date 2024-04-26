@@ -2,21 +2,23 @@ from dataclasses import dataclass, field
 import heapq
 from models.event import Event
 
+
 @dataclass
 class Record:
     """
     用于存放每场战斗中发生的事情
     """
+
     eventList: list[Event] = field(default_factory=list)
     delay: float = 0
-    display: bool = True
+    fromHot: bool = True
+    cost: float = 0 # 该事情（例如回血）的亏损为cost
+
     def __post_init__(self):
         self.prepared: bool = False
 
     def __str__(self) -> str:
-        return "delay: {0}, eventList: [{1}]".format(
-            str(self.delay), ", ".join(str(i) for i in self.eventList)
-        )
+        return f"delay: {str(self.delay)}, eventList: [{', '.join(str(i) for i in self.eventList)}]"
 
 
 class RecordQueue(object):
