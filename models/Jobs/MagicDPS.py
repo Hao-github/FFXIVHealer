@@ -1,12 +1,12 @@
 from models.status import DelayHeal, HealBonus, Hot, MagicMtg, PhysicMtg, maxHpShield
-from models.Jobs.decorator import petSkill, targetSkill
+from models.Jobs.decorator import pet_skill, target_skill
 from models.player import Player
 from models.record import Record
 
 
 class MagicDPS(Player):
-    def __init__(self, name: str, hp: int, damagePerPotency: float) -> None:
-        super().__init__(name, hp, damagePerPotency, 0.73, 0.84)
+    def __init__(self, name: str, hp: int, damage_per_potency: float) -> None:
+        super().__init__(name, hp, damage_per_potency, 0.73, 0.84)
 
     def Addle(self, **kwargs) -> Record:
         return self._buildRecord(
@@ -18,8 +18,8 @@ class MagicDPS(Player):
 
 
 class RedMage(MagicDPS):
-    def __init__(self, hp: int, damagePerPotency: float) -> None:
-        super().__init__("RedMage", hp, damagePerPotency)
+    def __init__(self, hp: int, damage_per_potency: float) -> None:
+        super().__init__("RedMage", hp, damage_per_potency)
 
     def MagickBarrier(self, **kwargs) -> Record:
         return self._buildRecord(
@@ -29,21 +29,21 @@ class RedMage(MagicDPS):
             ]
         )
 
-    @targetSkill
+    @target_skill
     def Vercure(self, **kwargs) -> Record:
         return self._buildRecord(value=500)
 
 
 class Summoner(MagicDPS):
-    def __init__(self, hp: int, damagePerPotency: float) -> None:
-        super().__init__("Summoner", hp, damagePerPotency)
-        self.petCoefficient: float = 0.95
+    def __init__(self, hp: int, damage_per_potency: float) -> None:
+        super().__init__("Summoner", hp, damage_per_potency)
+        self.pet_coefficient: float = 0.95
 
-    @petSkill
+    @pet_skill
     def EverlastingFlight(self, **kwargs) -> Record:
         return self._buildRecord(status=Hot("EverLastingFlight", 21, 100))
 
-    @petSkill
+    @pet_skill
     def Rekindle(self, **kwargs) -> Record:
         return self._buildRecord(
             value=400, status=DelayHeal("Rekindle", 30, isRekindle=True)
@@ -51,8 +51,8 @@ class Summoner(MagicDPS):
 
 
 class BlackMage(MagicDPS):
-    def __init__(self, hp: int, damagePerPotency: float) -> None:
-        super().__init__("BlackMage", hp, damagePerPotency)
+    def __init__(self, hp: int, damage_per_potency: float) -> None:
+        super().__init__("BlackMage", hp, damage_per_potency)
 
     def Manaward(self, **kwargs) -> Record:
         return self._buildRecord(status=maxHpShield("Manaward", 20, 30))

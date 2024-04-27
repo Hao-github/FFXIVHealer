@@ -34,7 +34,7 @@ class RecordQueue(object):
         return heapq.heappop(self._queue)[2]
 
     @property
-    def nextRecordTime(self) -> float:
+    def next_record_time(self) -> float:
         return self._queue[0][0]
 
     def empty(self):

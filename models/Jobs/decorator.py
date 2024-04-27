@@ -3,18 +3,16 @@ from models.record import Record
 from models.status import EventType, Hot
 
 
-def petSkill(func):
+def pet_skill(func):
     def wrapper(self, *args, **kwargs):
         ret: Record = func(self, *args, **kwargs)
-        ret.eventList = list(
-            map(lambda x: x.getBuff(self.petCoefficient), ret.eventList)
-        )
+        ret.eventList = [x.apply_buff(self.pet_coefficient) for x in ret.eventList]
         return ret
 
     return wrapper
 
 
-def targetSkill(func):
+def target_skill(func):
     def wrapper(self, *args, **kwargs):
         ret: Record = func(self, *args, **kwargs)
         event = ret.eventList[0]
@@ -24,10 +22,10 @@ def targetSkill(func):
     return wrapper
 
 
-def groundSkill(func):
+def ground_skill(func):
     def wrapper(self, *args, **kwargs):
         ret: Record = func(self, *args, **kwargs)
-        for status in ret.eventList[0].statusList:
+        for status in ret.eventList[0].status_list:
             if isinstance(status, Hot):
                 status.isGround = True
         ret.eventList[0].eventType = EventType.GroundInit
@@ -36,7 +34,7 @@ def groundSkill(func):
     return wrapper
 
 
-def selfSkill(func):
+def self_skill(func):
     def wrapper(self, *args, **kwargs):
         ret: Record = func(self, *args, **kwargs)
         for event in ret.eventList:
@@ -50,7 +48,7 @@ def cost(costType: str):
     def costCal(func):
         def wrapper(self, *args, **kwargs):
             ret: Record = func(self, *args, **kwargs)
-            ret.cost = getattr(self, costType+"Potency")
+            ret.cost = getattr(self, costType + "_potency")
             return ret
 
         return wrapper

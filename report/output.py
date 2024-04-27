@@ -1,28 +1,39 @@
 from collections import defaultdict
 from typing import Any
-from pyecharts.charts import Timeline, Bar, Line
+from pyecharts.charts import Line
 from pyecharts.commons.utils import JsCode
 import pyecharts.options as opts
 from models.player import Player
 
 js_string = """
-        function (params) {
-            console.log(params);
-            let ret = `time: ${params[0].axisValue}<br/>event: pass<br/>`;
-            for (let i = 0; i < params.length; i++) {
-                ret += `${params[i].seriesName}: ${params[i].data[1]} (${params[i].data[2]})`;
-                if (i < params.length - 1) {
-                    ret += '<br/>';
-                }
-            }
-            return ret;
+function customTooltip(params) {
+    console.log(params);
+    let tooltipContent = `time: ${params[0].axisValue}<br/>event: pass<br/>`;
+    params.forEach((param, index) => {
+        const hpSpan = `<span style="font-family: 'EurostarRegularExtended'; font-size: 14px; vertical-align: middle; width: 70px; display: inline-block; text-align: left;">${param.data[1]}</span>`;
+        const jobImage = `<img src="img/job/${param.data[3]}.png" alt="${param.seriesName}" style="width: 20px; height: 20px;">`;
+        const skillDetails = Object.entries(param.data[2])
+            .map(([skillName, remainingTime]) => {
+                const imgTag = `<img src="img/skill/${skillName}.png" alt="${skillName}" style="width: 20px; height: 20px;">`;
+                const remainingTimeSpan = `<span style="display: block; margin-top: -10px; font-size: 12px;">${remainingTime.toFixed(1)}</span>`;
+                return `<div style="display: inline-block; text-align: center; margin-right: 5px; vertical-align: middle; width: 30px">${imgTag}${remainingTimeSpan}</div>`;
+            })
+            .join('');
+
+        tooltipContent += `${jobImage}: ${hpSpan} ${skillDetails}`;
+
+
+        if (index < params.length - 1) {
+            tooltipContent += '<br/>';
         }
+    });
+    return tooltipContent;
+}
 """
 
 
 class Output:
     output = open("output.txt", "w", encoding="utf-8")
-    timeline = Timeline()
     x: list[float] = []
     y: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
 
@@ -31,46 +42,16 @@ class Output:
         cls.output.write(info)
 
     @classmethod
-    def addSnapshot(cls, time: float, playerList: dict[str, Player]):
+    def add_snapshot(cls, time: float, player_list: dict[str, Player]):
         cls.x.append(round(time, 2))
-        for name, player in playerList.items():
-            cls.y[name].append({"hp": player.hp, "status": f"[{player.statusList}]"})
-
-    @classmethod
-    def addBar(cls, timeStr: str, playerList: dict[str, Player]):
-        cls.timeline.add(
-            Bar(init_opts=opts.InitOpts(width="900px", height="500px"))
-            .add_xaxis(
-                list(map(lambda x: f"{x[0]}-{x[1].name}", playerList.items())),
+        for name, player in player_list.items():
+            cls.y[name].append(
+                {
+                    "hp": player.hp,
+                    "extra": player.status_list.get_remaining_times(),
+                    "job": player.job,
+                }
             )
-            .add_yaxis(
-                "hp",
-                list(map(lambda x: x.hp, playerList.values())),
-                label_opts=opts.LabelOpts(position="top"),
-            )
-            .add_yaxis(
-                "maxHp",
-                list(map(lambda x: x.maxHp, playerList.values())),
-                label_opts=opts.LabelOpts(is_show=False),
-                gap="-100%",
-                z=-1,
-                itemstyle_opts=opts.ItemStyleOpts(color="rgba(255, 0, 0, 0.5)"),
-            )
-            .set_global_opts(
-                xaxis_opts=opts.AxisOpts(
-                    splitline_opts=opts.SplitLineOpts(is_show=False),
-                    axislabel_opts={"rotate": -10},
-                ),
-                yaxis_opts=opts.AxisOpts(
-                    splitline_opts=opts.SplitLineOpts(is_show=False)
-                ),
-            ),
-            timeStr,
-        )
-
-    @classmethod
-    def showBar(cls):
-        cls.timeline.render()
 
     @classmethod
     def showLine(cls):
@@ -89,11 +70,11 @@ class Output:
             tooltip_opts=opts.TooltipOpts(
                 trigger="axis",
                 formatter=JsCode(js_string),
-                textstyle_opts=opts.TextStyleOpts(
-                    font_family="Courier New",  # 设置等宽字体
-                    font_weight="bold",  # 设置字体为粗体
-                    font_size=14,  # 根据需要调整字体大小
-                ),
+                textstyle_opts=opts.TextStyleOpts(font_family="AxisStdExtralight"),
+                position=JsCode("""
+                function (point, params, dom, rect, size) {
+                    return ['10%', '10%']
+                }"""),
             ),
             xaxis_opts=opts.AxisOpts(
                 type_="value",
@@ -107,5 +88,18 @@ class Output:
                 range_end=100,
                 orient="horizontal",
             ),
-        ).render("testasdf.html")
-        # pass
+        ).add_js_funcs("""
+        var style = document.createElement('style');
+        style.type = 'text/css';
+        style.innerHTML = `
+            @font-face {
+                font-family: 'EurostarRegularExtended';
+                src: url('fonts/eurostarregularextended.ttf') format('truetype');
+            }
+            @font-face {
+                font-family: 'AxisStdExtralight';
+                src: url('fonts/axisstd-extralight.otf') format('opentype');
+            }
+        `;
+        document.head.appendChild(style);
+        """).render()

@@ -9,7 +9,7 @@ class Evaluation:
     @classmethod
     def update(cls, record: Record):
         user = record.eventList[0].user
-        cls.gcdCost += record.cost * user.gcdPotency
+        cls.gcdCost += record.cost * user.gcd_potency
         if not record.fromHot and user.name not in ["h1", "h2"]:
             cls.cooperation += 1
         

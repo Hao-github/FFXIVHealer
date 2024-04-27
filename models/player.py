@@ -1,6 +1,6 @@
 from __future__ import annotations
 import traceback
-from models.status import EventType, StatusRtn
+from models.status import EventType
 
 from models.record import Record
 from models.event import Event
@@ -22,108 +22,126 @@ class Player:
         self,
         name: str,
         hp: int,
-        damagePerPotency: float,
-        magicDefense: float,
-        physicDefense: float,
-        gcdPotency: int = 0,
+        damage_per_potency: float,
+        magic_defense: float,
+        physic_defense: float,
+        gcd_potency: int = 0,
     ) -> None:
         self.name: str = name
-        self.maxHp: int = hp
+        self.max_hp: int = hp
         self.hp: int = hp
-        self.statusList: StatusList = StatusList(
-            [
-                Hot("naturalHeal", 10000, hp / 100, getSnapshot=False, display=False),
-                MagicMtg("magicDefense", 10000, magicDefense, display=False),
-                PhysicMtg("physicDefense", 10000, physicDefense, display=False),
-            ]
-        )
+        base_status_list: list[BaseStatus] = [
+            Hot("naturalHeal", 10000, hp / 100, get_snapshot=False, display=False),
+            MagicMtg("magicDefense", 10000, magic_defense, display=False),
+            PhysicMtg("physicDefense", 10000, physic_defense, display=False),
+        ]
+        self.status_list: StatusList = StatusList(base_status_list)
 
-        self.damagePerPotency: float = damagePerPotency
-        self.isSurvival: bool = True
-        self.gcdPotency: int = gcdPotency
+        self.damage_per_potency: float = damage_per_potency
+        self.is_survival: bool = True
+        self.gcd_potency: int = gcd_potency
 
-    def asEventUser(self, event: Event) -> Event:
+    def as_event_user(self, event: Event) -> Event:
         """作为事件的使用者, 如果是治疗事件, 计算自身身上的威力"""
         match event.eventType:
             case EventType.Heal | EventType.GroundInit:
-                return event.getBuff(self.damagePerPotency)
+                return event.apply_buff(self.damage_per_potency)
             case _:
                 return event
 
-    def asEventTarget(self, event: Event) -> Event:
+    def as_event_target(self, event: Event) -> Event:
         """作为事件的对象, 计算受疗或者减伤等"""
         match event.eventType:
             case EventType.GroundInit:
                 event.value *= self.calPct(HealBonus)
             case EventType.MaxHpChange:
-                self.__maxHpChange(-int(event.value))
+                self.__change_max_hp(-int(event.value))
             case EventType.Heal | EventType.GroundHeal:
-                event.getBuff(self.calPct(HealBonus))
+                event.apply_buff(self.calPct(HealBonus))
             case EventType.MagicDmg:
-                event.getBuff(self.calPct(MagicMtg))
-                event.value = self.calDamageAfterShield(int(event.value))
+                event.apply_buff(self.calPct(MagicMtg))
+                event.value = self.calculate_damage_after_shield(int(event.value))
             case EventType.PhysicDmg:
-                event.getBuff(self.calPct(PhysicMtg))
-                event.value = self.calDamageAfterShield(int(event.value))
+                event.apply_buff(self.calPct(PhysicMtg))
+                event.value = self.calculate_damage_after_shield(int(event.value))
             case EventType.TrueDamage:
-                event.value = self.calDamageAfterShield(int(event.value))
+                event.value = self.calculate_damage_after_shield(int(event.value))
         return event
 
-    def calDamageAfterShield(self, damage: int) -> int:
-        for status in self.statusList.sheildList:
-            if status.value > damage:
-                status.value -= damage
+    def calculate_damage_after_shield(self, damage: int) -> int:
+        """Calculates the remaining damage after applying shields.
+
+        Args:
+            damage: The incoming damage to be reduced by shields.
+
+        Returns:
+            The remaining damage after shields are applied.
+        """
+        for shield in self.status_list.shield_list:
+            if shield.value > damage:
+                # Reduce shield value by damage and return 0 as no remaining damage
+                shield.value -= damage
                 return 0
-            damage -= int(status.value)
-            status.remainTime = 0
+            # Subtract shield value from damage and reset shield remain time
+            damage -= int(shield.value)
+            shield.remain_time = 0
         return damage
 
-    def dealWithReadyEvent(self, event: Event) -> Event | bool:
-        if not self.isSurvival:
+    def deal_with_ready_event(self, event: Event) -> Event | bool:
+        if not self.is_survival:
             return True
-        list(map(lambda status: self.__getStatus(status), event.statusList))
+        for status in event.status_list:
+            self.__get_status(status)
         # 对于治疗事件
         if event.eventType.value < 4:
-            if event.nameIs("Pepsis"):
-                if self.removeShield("EkurasianDignosis"):
-                    event.getBuff(1.4)
-                elif not self.removeShield("EkurasianPrognosis"):
-                    event.getBuff(0)
-            self.hp = min(self.maxHp, self.hp + int(event.value))
-            return True
+            return self.__handle_healing_event(event)
+        else:
+            return self.__handle_damage_event(event)
 
+    def __handle_healing_event(self, event: Event) -> bool:
+        if event.name_is("Pepsis"):
+            if self.remove_shield("EkurasianDignosis"):
+                event.apply_buff(1.4)
+            elif not self.remove_shield("EkurasianPrognosis"):
+                event.apply_buff(0)
+        self.hp = min(self.max_hp, self.hp + int(event.value))
+        return True
+
+    def __handle_damage_event(self, event: Event) -> bool:
         self.hp -= int(event.value)
         if self.hp > 0:
-            return self.statusList.calHotTick() < self.hp
-        self.isSurvival = False
+            return self.status_list.calHotTick() < self.hp
+        self.is_survival = False
         return False
 
-    def update(self, timeInterval: float) -> list[Event]:
+    def update(self, time_interval: float) -> list[Event]:
         """更新所有的status, 并返回所有status产生的event"""
-        if not self.isSurvival:
+        if not self.is_survival:
             return []
-        rtn: list[StatusRtn] = self.statusList.update(
-            timeInterval, hpPercentage=self.hp / self.maxHp, hp=self.hp
-        )
-        return list(map(lambda x: Event.fromStatusRtn(x, self, self), rtn))
+        return [
+            Event.from_StatusRtn(x, self, self)
+            for x in self.status_list.update(
+                time_interval, hpPercentage=self.hp / self.max_hp, hp=self.hp
+            )
+        ]
 
     def calPct(self, myType: type) -> float:
-        return self.statusList.calPct(myType)
+        return self.status_list.calPct(myType)
 
-    def searchStatus(self, name: str) -> BaseStatus | None:
+    def has_status(self, name: str) -> BaseStatus | None:
         """检查自身有无对应的status"""
-        return self.statusList.searchStatus(name)
+        return self.status_list.has_status(name)
 
-    def removeStatus(self, name: str) -> BaseStatus | None:
-        return self.statusList.searchStatus(name, True)
-    
-    def removeShield(self, name: str) -> BaseStatus | None:
-        return self.statusList.searchStatus(name, True, True)
+    def remove_status(self, name: str) -> BaseStatus | None:
+        return self.status_list.has_status(name, True)
+
+    def remove_shield(self, name: str) -> BaseStatus | None:
+        return self.status_list.has_status(name, True, True)
 
     def __str__(self) -> str:
         return (
-            f"{self.name:<13}: {str(self.hp):>6}/{str(self.maxHp):<6},"
-            f"statusList: [{str(self.statusList)}]\n"
+            f"{self.name:<13}: {str(self.hp):>6}/{str(self.max_hp):<6},"
+            f"statusList: [{str(self.status_list)}]\n"
         )
 
     def _buildRecord(
@@ -149,21 +167,27 @@ class Player:
             status if isinstance(status, list) else [status],
         )
 
-    def __maxHpChange(self, hpChange: int) -> None:
-        self.maxHp += hpChange
-        self.hp = self.hp + hpChange if hpChange > 0 else max(self.maxHp, self.hp)
+    def __change_max_hp(self, hp_change_num: int) -> None:
+        self.max_hp += hp_change_num
+        self.hp = min(
+            self.hp + hp_change_num if hp_change_num > 0 else self.hp, self.max_hp
+        )
 
-    def __getStatus(self, status: BaseStatus) -> None:
+    def __get_status(self, status: BaseStatus) -> None:
         """获取buff, 如果是基于自身最大生命值的盾, 则转化为对应数值"""
 
         # 对基于目标最大生命值百分比的盾而非自己的进行特殊处理
         if isinstance(status, maxHpShield):
-            status = status.toShield(self.maxHp)
+            status = status.to_shield(self.max_hp)
         elif isinstance(status, IncreaseMaxHp):
-            status.increaseHpNum = int(self.maxHp * (status.value - 1))
-            self.__maxHpChange(status.increaseHpNum)
+            status.increase_hp_num = int(self.max_hp * (status.value - 1))
+            self.__change_max_hp(status.increase_hp_num)
 
-        self.statusList.append(status)
+        self.status_list.append(status)
+        
+    @property
+    def job(self):
+        return type(self).__name__
 
 
 allPlayer = Player("totalPlayer", 0, 0, 0, 0)

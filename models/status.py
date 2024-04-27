@@ -32,23 +32,24 @@ class BaseStatus:
     name: str
     duration: float = field(compare=False)
     value: float = field(compare=False, default=0)
-    getSnapshot: bool = field(compare=False, default=False)
+    get_snapshot: bool = field(compare=False, default=False)
     display: bool = True
 
     def __post_init__(self):
-        self.remainTime = self.duration
+        self.remain_time = self.duration
 
     def update(self, timeInterval: float, **kwargs) -> StatusRtn | None:
-        self.remainTime -= timeInterval
+        self.remain_time -= timeInterval
 
     def __str__(self) -> str:
-        return f"{self.name}: {round(self.remainTime, 2)}s"
+        return f"{self.name}: {round(self.remain_time, 2)}s"
 
     def __lt__(self, __value: BaseStatus) -> bool:
         return self.value < __value.value
 
-    def getBuff(self, percentage: float) -> BaseStatus:
-        self.value *= percentage if self.getSnapshot else 1
+    def apply_buff(self, percentage: float) -> BaseStatus:
+        if self.get_snapshot:
+            self.value *= percentage
         return self
 
 
@@ -87,17 +88,17 @@ class SpellBonus(BaseStatus):
 
 @dataclass
 class Shield(BaseStatus):
-    getSnapshot: bool = True
+    get_snapshot: bool = True
 
 
 class maxHpShield(BaseStatus):
-    def toShield(self, maxHp: int) -> Shield:
-        return Shield(self.name, self.duration, maxHp * self.value // 100)
+    def to_shield(self, max_hp: int) -> Shield:
+        return Shield(self.name, self.duration, max_hp * self.value // 100)
 
 
 @dataclass
 class Dot(BaseStatus):
-    getSnapshot: bool = True
+    get_snapshot: bool = True
 
     def __post_init__(self):
         super().__post_init__()
@@ -112,7 +113,7 @@ class Dot(BaseStatus):
 @dataclass
 class Hot(BaseStatus):
     interval: float = 3
-    getSnapshot: bool = True
+    get_snapshot: bool = True
     until: float = 999999
 
     def __post_init__(self):
@@ -123,7 +124,7 @@ class Hot(BaseStatus):
     def update(self, timeInterval: float, **kwargs) -> StatusRtn | None:
         super().update(timeInterval)
         if kwargs.get("hp", 0) > self.until:
-            self.remainTime = 0
+            self.remain_time = 0
         if self.timer.update(timeInterval):
             return StatusRtn(
                 EventType.GroundHeal if self.isGround else EventType.TrueHeal,
@@ -135,14 +136,14 @@ class Hot(BaseStatus):
 @dataclass
 class DelayHeal(BaseStatus):
     trigger: float = 0.5
-    getSnapshot: bool = True
+    get_snapshot: bool = True
     # 专为不死鸟帽写的属性
     isRekindle: bool = False
 
     def update(self, timeInterval: float, hpPercentage: float) -> StatusRtn | None:
         super().update(timeInterval)
-        if self.remainTime <= 0 or hpPercentage < self.trigger:
-            self.remainTime = 0
+        if self.remain_time <= 0 or hpPercentage < self.trigger:
+            self.remain_time = 0
             ret = StatusRtn(EventType.TrueHeal, self.name, self.value)
             if self.isRekindle:
                 ret.status = Hot("Rekindle", 15, self.value / 2)
@@ -151,12 +152,12 @@ class DelayHeal(BaseStatus):
 
 @dataclass
 class IncreaseMaxHp(HealBonus):
-    increaseHpNum: int = 0
+    increase_hp_num: int = 0
 
     def update(self, timeInterval: float, **kwargs) -> StatusRtn | None:
         super().update(timeInterval)
-        if self.remainTime <= 0:
-            return StatusRtn(EventType.MaxHpChange, self.name, self.increaseHpNum)
+        if self.remain_time <= 0:
+            return StatusRtn(EventType.MaxHpChange, self.name, self.increase_hp_num)
 
 
 @dataclass
@@ -167,9 +168,9 @@ class HaimaShield(Shield):
         self.stackTime: float = 15
         self.originValue: float = self.value
 
-    def getBuff(self, percentage: float) -> BaseStatus:
+    def apply_buff(self, percentage: float) -> BaseStatus:
         self.originValue *= percentage
-        return super().getBuff(percentage)
+        return super().apply_buff(percentage)
 
     def update(self, timeInterval: float, **kwargs) -> StatusRtn | None:
         super().update(timeInterval)
@@ -180,19 +181,19 @@ class HaimaShield(Shield):
                 EventType.TrueHeal,
                 self.name,
                 self.originValue * self.stack / 2,
-                status=Shield(self.name, self.remainTime, self.value),
+                status=Shield(self.name, self.remain_time, self.value),
             )
             return ret
         # 检测到海马盾已破
         if self.value <= 0 and self.stack > 0:
             self.stack -= 1
-            self.remainTime = self.duration
+            self.remain_time = self.duration
             self.value = self.originValue
 
 
 @dataclass
 class Bell(BaseStatus):
-    getSnapshot: bool = False
+    get_snapshot: bool = False
 
     def __post_init__(self):
         super().__post_init__()
@@ -201,14 +202,14 @@ class Bell(BaseStatus):
     def update(self, timeInterval: float, **kwargs) -> StatusRtn | None:
         super().update(timeInterval)
         self.bellCD -= timeInterval
-        if self.remainTime <= 0 and self.value > 0:
+        if self.remain_time <= 0 and self.value > 0:
             return StatusRtn(EventType.Heal, "BellEnd", self.value * 200)
 
-    def getHeal(self) -> StatusRtn | None:
+    def get_heal(self) -> StatusRtn | None:
         if self.bellCD > 0:
             return
         self.bellCD = 1
         self.value -= 1
         if self.value == 0:
-            self.remainTime = 0
+            self.remain_time = 0
         return StatusRtn(EventType.Heal, "BellHeal", 400)
