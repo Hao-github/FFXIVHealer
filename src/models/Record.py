@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 import heapq
-from models.event import Event
+from .Event import Event
 
 
 @dataclass
@@ -11,7 +11,7 @@ class Record:
 
     eventList: list[Event] = field(default_factory=list)
     delay: float = 0
-    fromHot: bool = True
+    fromHot: bool = False
     cost: float = 0 # 该事情（例如回血）的亏损为cost
 
     def __post_init__(self):

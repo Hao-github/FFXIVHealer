@@ -1,20 +1,20 @@
 from __future__ import annotations
 import traceback
-from models.status import EventType
 
-from models.record import Record
-from models.event import Event
-from models.status import (
+from .Record import Record
+from .Event import Event
+from .Status import (
+    EventType,
     BaseStatus,
     HealBonus,
     Hot,
     IncreaseMaxHp,
     MagicMtg,
     PhysicMtg,
-    maxHpShield,
+    MaxHpShield,
 )
 
-from models.statusList import StatusList
+from .StatusList import StatusList
 
 
 class Player:
@@ -177,17 +177,21 @@ class Player:
         """获取buff, 如果是基于自身最大生命值的盾, 则转化为对应数值"""
 
         # 对基于目标最大生命值百分比的盾而非自己的进行特殊处理
-        if isinstance(status, maxHpShield):
+        if isinstance(status, MaxHpShield):
             status = status.to_shield(self.max_hp)
         elif isinstance(status, IncreaseMaxHp):
             status.increase_hp_num = int(self.max_hp * (status.value - 1))
             self.__change_max_hp(status.increase_hp_num)
 
         self.status_list.append(status)
-        
+
     @property
     def job(self):
         return type(self).__name__
+
+    @property
+    def remaining_status(self) -> dict[str, float]:
+        return self.status_list.get_remaining_times()
 
 
 allPlayer = Player("totalPlayer", 0, 0, 0, 0)

@@ -4,9 +4,6 @@
 output.txt
 *.xlsx
 /env3.11
-main.spec
-/dist
-/build
 /render.html
 /pyproject.toml
 /tests/

@@ -91,7 +91,7 @@ class Shield(BaseStatus):
     get_snapshot: bool = True
 
 
-class maxHpShield(BaseStatus):
+class MaxHpShield(BaseStatus):
     def to_shield(self, max_hp: int) -> Shield:
         return Shield(self.name, self.duration, max_hp * self.value // 100)
 

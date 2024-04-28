@@ -1,4 +1,4 @@
-from models.record import Record
+from src.models.Record import Record
 
 
 class Evaluation:

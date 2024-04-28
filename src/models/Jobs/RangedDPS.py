@@ -1,7 +1,12 @@
-from models.Jobs.decorator import self_skill
-from models.status import Mtg, HealBonus, Hot, maxHpShield
-from models.player import Player
-from models.record import Record
+from .decorator import self_skill
+from ..Status import (
+    Mtg,
+    HealBonus,
+    Hot,
+    MaxHpShield,
+)
+from ..player import Player
+from ..Record import Record
 
 
 class RangedDPS(Player):
@@ -34,7 +39,7 @@ class Dancer(RangedDPS):
         stack: int = min(4, int(kwargs.get("duration", 0)) // 3)
         return self._buildRecord(
             status=[
-                maxHpShield("ImprovisationShield", 30, self.stackList[stack]),
+                MaxHpShield("ImprovisationShield", 30, self.stackList[stack]),
                 Hot("ImprovisationHot", 15 + stack * 3, 100),
             ],
         )

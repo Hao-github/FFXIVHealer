@@ -1,9 +1,11 @@
-from collections import defaultdict
+from dataclasses import dataclass, field
 from typing import Any
 from pyecharts.charts import Line
 from pyecharts.commons.utils import JsCode
 import pyecharts.options as opts
-from models.player import Player
+
+from ..models.player import Player
+from ..models.Event import Event
 
 js_string = """
 function customTooltip(params) {
@@ -11,12 +13,12 @@ function customTooltip(params) {
     let tooltipContent = `time: ${params[0].axisValue}<br/>event: pass<br/>`;
     params.forEach((param, index) => {
         const hpSpan = `<span style="font-family: 'EurostarRegularExtended'; font-size: 14px; vertical-align: middle; width: 70px; display: inline-block; text-align: left;">${param.data[1]}</span>`;
-        const jobImage = `<img src="img/job/${param.data[3]}.png" alt="${param.seriesName}" style="width: 20px; height: 20px;">`;
+        const jobImage = `<img src="resources/images/job/${param.data[3]}.png" alt="${param.seriesName}" style="width: 20px; height: 20px;">`;
         const skillDetails = Object.entries(param.data[2])
             .map(([skillName, remainingTime]) => {
-                const imgTag = `<img src="img/skill/${skillName}.png" alt="${skillName}" style="width: 20px; height: 20px;">`;
+                const imgTag = `<img src="resources/images/skill/${skillName}.png" alt="${skillName}" style="width: 15px; height: 20px;">`;
                 const remainingTimeSpan = `<span style="display: block; margin-top: -10px; font-size: 12px;">${remainingTime.toFixed(1)}</span>`;
-                return `<div style="display: inline-block; text-align: center; margin-right: 5px; vertical-align: middle; width: 30px">${imgTag}${remainingTimeSpan}</div>`;
+                return `<div style="display: inline-block; text-align: center; margin-right: 5px; vertical-align: middle; width: 25px">${imgTag}${remainingTimeSpan}</div>`;
             })
             .join('');
 
@@ -32,35 +34,38 @@ function customTooltip(params) {
 """
 
 
+@dataclass
+class Snapshot:
+    time: float
+    event: Event
+    player_info: dict[str, Any] = field(default_factory=dict)
+
+
 class Output:
     output = open("output.txt", "w", encoding="utf-8")
-    x: list[float] = []
-    y: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
+    snapshot_list: list[Snapshot] = []
 
     @classmethod
     def info(cls, info: str):
         cls.output.write(info)
 
     @classmethod
-    def add_snapshot(cls, time: float, player_list: dict[str, Player]):
-        cls.x.append(round(time, 2))
-        for name, player in player_list.items():
-            cls.y[name].append(
-                {
-                    "hp": player.hp,
-                    "extra": player.status_list.get_remaining_times(),
-                    "job": player.job,
-                }
-            )
+    def add_snapshot(cls, time: float, player_list: dict[str, Player], event: Event):
+        player_info = {
+            name: {"hp": player.hp, "extra": player.remaining_status, "job": player.job}
+            for name, player in player_list.items()
+        }
+        cls.snapshot_list.append(Snapshot(round(time, 2), event, player_info))
 
     @classmethod
-    def showLine(cls):
-        line_chart = Line().add_xaxis(cls.x)
+    def show_line(cls):
+        time_list = [snapshot.time for snapshot in cls.snapshot_list]
+        line_chart = Line().add_xaxis(time_list)
 
-        for k, v in cls.y.items():
+        for player in cls.snapshot_list[0].player_info.keys():
             line_chart.add_yaxis(
-                series_name=k,
-                y_axis=v,
+                series_name=player,
+                y_axis=[snapshot.player_info[player] for snapshot in cls.snapshot_list],
                 label_opts=opts.LabelOpts(is_show=False),
                 is_symbol_show=False,
             )
@@ -77,9 +82,7 @@ class Output:
                 }"""),
             ),
             xaxis_opts=opts.AxisOpts(
-                type_="value",
-                min_=cls.x[0],
-                max_=cls.x[-1],
+                type_="value", min_=time_list[0], max_=time_list[-1]
             ),
             datazoom_opts=opts.DataZoomOpts(
                 is_zoom_lock=False,
@@ -94,12 +97,32 @@ class Output:
         style.innerHTML = `
             @font-face {
                 font-family: 'EurostarRegularExtended';
-                src: url('fonts/eurostarregularextended.ttf') format('truetype');
+                src: url('resources/fonts/eurostarregularextended.ttf') format('truetype');
             }
             @font-face {
                 font-family: 'AxisStdExtralight';
-                src: url('fonts/axisstd-extralight.otf') format('opentype');
+                src: url('resources/fonts/axisstd-extralight.otf') format('opentype');
             }
         `;
         document.head.appendChild(style);
         """).render()
+
+    # @classmethod
+    # def show_txt_output(cls):
+    #     for snapshot in cls.snapshot_list:
+    #         if snapshot.event.name_is("naturalHeal"):
+    #             continue
+    #         Output.info(
+    #             f"After Event {snapshot.event.name} At {cls.__fromTimestamp(snapshot.time)}\n"
+    #         )
+    #         # for 
+    #         # Output.info(f"{name}-{str(player)}")
+    #     pass
+
+    # @staticmethod
+    # def __fromTimestamp(rawTime: float) -> str:
+    #     begin = ""
+    #     if rawTime < 0:
+    #         begin = "-"
+    #         rawTime = -rawTime
+    #     return f"{begin}{int(rawTime // 60)}:{round(rawTime % 60, 3)}"

@@ -1,5 +1,5 @@
-from models.Jobs.decorator import self_skill, target_skill
-from models.status import (
+from .decorator import self_skill, target_skill
+from ..Status import (
     BaseStatus,
     DelayHeal,
     IncreaseMaxHp,
@@ -7,11 +7,11 @@ from models.status import (
     Mtg,
     Shield,
     Hot,
-    maxHpShield,
+    MaxHpShield,
 )
-from models.event import Event
-from models.player import Player
-from models.record import Record
+from ..Event import Event
+from ..player import Player
+from ..Record import Record
 
 # class ComboHealingStack:
 
@@ -92,7 +92,7 @@ class Warrior(Tank):
     def as_event_user(self, event: Event) -> Event:
         if event.name_is("ShakeItOff"):
             defense_bonus = self.__calculate_defense_bonus()
-            event.append(maxHpShield("ShakeItOffShield", 30, defense_bonus))
+            event.append(MaxHpShield("ShakeItOffShield", 30, defense_bonus))
         return super().as_event_user(event)
 
     def __calculate_defense_bonus(self) -> int:
@@ -204,7 +204,7 @@ class DarkKnight(Tank):
 
     @target_skill
     def TheBlackestNight(self, **kwargs) -> Record:
-        return self._buildRecord(status=maxHpShield("TheBlackestNight", 7, 25))
+        return self._buildRecord(status=MaxHpShield("TheBlackestNight", 7, 25))
 
     @target_skill
     def Oblation(self, **kwargs) -> Record:

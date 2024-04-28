@@ -1,13 +1,12 @@
 from functools import reduce
-from models.status import Bell, EventType
-from models.Jobs.decorator import (
+from .decorator import (
     cost,
     ground_skill,
     pet_skill,
     self_skill,
     target_skill,
 )
-from models.status import (
+from ..Status import (Bell, EventType,
     BaseStatus,
     DelayHeal,
     HaimaShield,
@@ -19,9 +18,9 @@ from models.status import (
     Mtg,
     Shield,
 )
-from models.event import Event
-from models.player import Player, allPlayer
-from models.record import Record
+from ..Event import Event
+from ..player import Player, allPlayer
+from ..Record import Record
 
 
 class Healer(Player):

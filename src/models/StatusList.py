@@ -1,6 +1,6 @@
 from functools import reduce
-from models.status import BaseStatus, Hot, Shield, StatusRtn
 from itertools import chain
+from .Status import BaseStatus, Hot, Shield, StatusRtn
 
 
 class StatusList:

@@ -1,12 +1,22 @@
-from models.Jobs.decorator import self_skill
-from models.status import HealBonus, MagicMtg, Mtg, PhysicMtg, maxHpShield
-from models.player import Player
-from models.record import Record
+from .decorator import self_skill
+from ..Status import (
+    HealBonus,
+    MagicMtg,
+    Mtg,
+    PhysicMtg,
+    MaxHpShield,
+)
+from ..player import Player
+from ..Record import Record
 
 
 class MeleeDPS(Player):
     def __init__(
-        self, name: str, hp: int, damage_per_potency: float, physic_defense: float = 0.78
+        self,
+        name: str,
+        hp: int,
+        damage_per_potency: float,
+        physic_defense: float = 0.78,
     ) -> None:
         super().__init__(name, hp, damage_per_potency, physic_defense, 0.78)
 
@@ -55,7 +65,7 @@ class Ninja(MeleeDPS):
 
     @self_skill
     def ShadeShift(self, **kwargs) -> Record:
-        return self._buildRecord(status=maxHpShield("ShadeShift", 20, 20))
+        return self._buildRecord(status=MaxHpShield("ShadeShift", 20, 20))
 
 
 class Reaper(MeleeDPS):
@@ -65,4 +75,4 @@ class Reaper(MeleeDPS):
     @self_skill
     def ArcaneCrest(self, **kwargs) -> Record:
         # TODO: 未添加hot
-        return self._buildRecord(status=maxHpShield("ArcaneCrest", 5, 10))
+        return self._buildRecord(status=MaxHpShield("ArcaneCrest", 5, 10))

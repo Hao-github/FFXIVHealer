@@ -1,9 +1,11 @@
 import pandas as pd
-from models.evaluation import Evaluation
-from models.player import allPlayer, Player
-from models.event import Event
-from models.record import RecordQueue, Record
-from report.output import Output
+import re
+from .report.evaluation import Evaluation
+from .models.player import allPlayer, Player
+from .models.Event import Event
+from .models.Record import RecordQueue, Record
+from .report.Output import Output
+from .models.Jobs import * # noqa: F403
 
 
 class Fight:
@@ -11,13 +13,13 @@ class Fight:
     record_queue: RecordQueue = RecordQueue()
 
     @classmethod
-    def addbaseCofig(cls, excelFile: str) -> None:
-        dfDict = pd.read_excel(excelFile, sheet_name=None)
-        dfDict["小队列表"].apply(cls.__rowToPlayer, axis=1)
-        dfDict["BOSS时间轴"].apply(cls.__rowToBossRecord, axis=1)
+    def addbaseCofig(cls, excel_file: str) -> None:
+        dfDict = pd.read_excel(excel_file, sheet_name=None)
+        dfDict["小队列表"].apply(cls.__row_to_player, axis=1)
+        dfDict["BOSS时间轴"].apply(cls.__row_to_boss_record, axis=1)
         for r in dfDict["奶轴"].merge(dfDict["技能"], on="name").to_dict("records"):
             cls.record_queue.push(
-                cls.__toTimestamp(r["time"]),
+                cls.__to_timestamp(r["time"]),
                 getattr(Fight.member[r["user"]], r["skillName"])(**r),
             )
 
@@ -40,11 +42,10 @@ class Fight:
                 else:
                     Evaluation.update(record)
                     cls.__for_prepared_record(record, time)
-                    Output.add_snapshot(time, cls.member)
-                    cls.showInfo(time, record.eventList[0])
+                    Output.add_snapshot(time, cls.member, record.eventList[0])
 
                 if cls.record_queue.empty():
-                    Output.showLine()
+                    Output.show_line()
                     return
 
             time += step
@@ -53,7 +54,7 @@ class Fight:
     def __update_member_statuses(cls, step: float, time: float):
         updates: list[Event] = sum((m.update(step) for m in cls.member.values()), [])
         if updates:
-            cls.record_queue.push(time, Record(updates, fromHot=False))
+            cls.record_queue.push(time, Record(updates, fromHot=True))
 
     @classmethod
     def __for_unprepared_record(cls, record: Record) -> Record:
@@ -80,46 +81,29 @@ class Fight:
                 cls.record_queue.push(time, Record([ret]))
 
     @classmethod
-    def showInfo(cls, time: float, event: Event):
-        if event.name_is("naturalHeal"):
-            return
-        eventStr: str = f"{event.name} At {cls.__fromTimestamp(time)}"
-        Output.info(f"After Event {eventStr}\n")
-        for name, player in cls.member.items():
-            Output.info(f"{name}-{str(player)}")
-
-    @classmethod
-    def __rowToPlayer(cls, row: pd.Series):
-        jobClass = getattr(__import__("models.Jobs." + row["class"]), row["job"])
-        cls.member[row["name"]] = jobClass(row["hp"], row["damagePerPotency"])
+    def __row_to_player(cls, row: pd.Series):
+        cls.member[row["name"]] = eval(row["job"])(row["hp"], row["damagePerPotency"])
         return 0
 
     @classmethod
-    def __rowToBossRecord(cls, row: pd.Series):
+    def __row_to_boss_record(cls, row: pd.Series):
         event = Event.fromRow(
             row,
             Player("boss", 0, 0, 0, 0),
             allPlayer if row["target"] == "all" else cls.member[row["target"]],
         )
         cls.record_queue.push(
-            cls.__toTimestamp(row["prepareTime"]), Record([event], delay=row["delay"])
+            cls.__to_timestamp(row["prepareTime"]), Record([event], delay=row["delay"])
         )
         return 0
 
     @staticmethod
-    def __toTimestamp(rawTime: str) -> float:
-        negative = False
-        if rawTime[0] == "-":
-            negative = True
-            rawTime = rawTime[1:]
-        m, s = rawTime.strip().split(":")
-        ret = int(m) * 60 + float(s)
-        return ret if not negative else -ret
+    def __to_timestamp(raw_time: str) -> float:
+        # 使用正则表达式匹配时间格式
+        match = re.match(r"(-?)(\d+):(\d+(?:\.\d+)?)", raw_time.strip())
+        if not match:
+            raise ValueError(f"Invalid time format: {raw_time}")
+        negative, minutes, seconds = match.groups()
+        total_seconds = int(minutes) * 60 + float(seconds)
 
-    @staticmethod
-    def __fromTimestamp(rawTime: float) -> str:
-        begin = ""
-        if rawTime < 0:
-            begin = "-"
-            rawTime = -rawTime
-        return f"{begin}{int(rawTime // 60)}:{round(rawTime % 60, 3)}"
+        return -total_seconds if negative else total_seconds

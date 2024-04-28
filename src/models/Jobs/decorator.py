@@ -1,6 +1,6 @@
-import Fight
-from models.record import Record
-from models.status import EventType, Hot
+import src.Fight as Fight
+from ..Record import Record
+from ..Status import EventType, Hot
 
 
 def pet_skill(func):

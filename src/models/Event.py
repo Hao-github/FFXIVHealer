@@ -1,13 +1,13 @@
 from __future__ import annotations
 from copy import deepcopy
 from dataclasses import dataclass, field, replace
-
-import pandas as pd
-from models.status import BaseStatus, EventType, StatusRtn, Dot
 from typing import TYPE_CHECKING
+import pandas as pd
+
+from .Status import BaseStatus, EventType, StatusRtn, Dot
 
 if TYPE_CHECKING:
-    from models.player import Player
+    from .player import Player
 
 
 @dataclass

@@ -1,7 +1,14 @@
-from models.status import DelayHeal, HealBonus, Hot, MagicMtg, PhysicMtg, maxHpShield
-from models.Jobs.decorator import pet_skill, target_skill
-from models.player import Player
-from models.record import Record
+from .decorator import pet_skill, target_skill
+from ..Status import (
+    DelayHeal,
+    HealBonus,
+    Hot,
+    MagicMtg,
+    PhysicMtg,
+    MaxHpShield,
+)
+from ..player import Player
+from ..Record import Record
 
 
 class MagicDPS(Player):
@@ -55,4 +62,4 @@ class BlackMage(MagicDPS):
         super().__init__("BlackMage", hp, damage_per_potency)
 
     def Manaward(self, **kwargs) -> Record:
-        return self._buildRecord(status=maxHpShield("Manaward", 20, 30))
+        return self._buildRecord(status=MaxHpShield("Manaward", 20, 30))

@@ -1,4 +1,4 @@
-from Fight import Fight
+from src.Fight import Fight
 
 
 if __name__ == "__main__":
