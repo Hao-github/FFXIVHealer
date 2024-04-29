@@ -41,7 +41,7 @@ class Event:
         return self.name == name
 
     @staticmethod
-    def fromRow(row: pd.Series, user: "Player", target: "Player") -> Event:
+    def from_row(row: pd.Series, user: "Player", target: "Player") -> Event:
         return Event(
             EventType.MagicDmg if row["type"] == "magic" else EventType.PhysicDmg,
             name=row["name"],

@@ -1,4 +1,4 @@
-from .decorator import self_skill, target_skill
+from .decorator import single_skill
 from ..Status import (
     BaseStatus,
     DelayHeal,
@@ -24,11 +24,11 @@ class Tank(Player):
     def Reprisal(self, **kwargs) -> Record:
         return self._buildRecord(status=Mtg("Reprisal", 10, 0.9))
 
-    @self_skill
+    @single_skill
     def Vengeance(self, **kwargs) -> Record:
         return self._buildRecord(status=Mtg("Vengeance", 15, 0.7))
 
-    @self_skill
+    @single_skill
     def Rampart(self, **kwargs) -> Record:
         return self._buildRecord(status=Mtg("Rampart", 20, 0.8))
 
@@ -58,11 +58,11 @@ class Paladin(Tank):
     def PassageOfArms(self, **kwargs) -> Record:
         return self._buildRecord(status=Mtg("PassageOfArms", 5, 0.85))
 
-    @self_skill
+    @single_skill
     def Bulwark(self, **kwargs) -> Record:
         return self._buildRecord(status=Mtg("Bulwark", 10, 0.8))
 
-    @self_skill
+    @single_skill
     def HolySheltron(self, **kwargs) -> Record:
         return self._buildRecord(
             status=[
@@ -72,13 +72,13 @@ class Paladin(Tank):
             ]
         )
 
-    @target_skill
+    @single_skill
     def Intervention(self, **kwargs) -> Record:
         return self._buildRecord(
             status=[Mtg("Knight'sResolve", 4, 0.9), Hot("Knight'sResolveHot", 12, 250)]
         )
 
-    @self_skill
+    @single_skill
     def HallowedGround(self, **kwargs) -> Record:
         return self._buildRecord(status=Shield("HallowedGround", 10, 1000000))
 
@@ -103,7 +103,7 @@ class Warrior(Tank):
     def ShakeItOff(self, **kwargs) -> Record:
         return self._buildRecord(value=300, status=Hot("ShakeItOffHot", 15, 100))
 
-    @self_skill
+    @single_skill
     def Bloodwhetting(self, **kwargs) -> Record:
         return self._buildRecord(
             status=[
@@ -114,7 +114,7 @@ class Warrior(Tank):
             ],
         )
 
-    @target_skill
+    @single_skill
     def NascentFlash(self, **kwargs) -> Record:
         return Record(
             [
@@ -133,15 +133,15 @@ class Warrior(Tank):
             ]
         )
 
-    @self_skill
+    @single_skill
     def Equilibrium(self, **kwargs) -> Record:
         return self._buildRecord(value=1200, status=Hot("Equilibrium", 15, 200))
 
-    @self_skill
+    @single_skill
     def TrillOfBattle(self, **kwargs) -> Record:
         return self._buildRecord(status=IncreaseMaxHp("TrillOfBattle", 10, 1.2))
 
-    @self_skill
+    @single_skill
     def Holmgang(self, **kwargs) -> Record:
         return self._buildRecord(status=BaseStatus("Holmgang", 10))
 
@@ -168,15 +168,15 @@ class GunBreaker(Tank):
     def HeartOfLight(self, **kwargs) -> Record:
         return self._buildRecord(status=MagicMtg("HeartOfLight", 15, 0.9))
 
-    @target_skill
+    @single_skill
     def Aurora(self, **kwargs) -> Record:
         return self._buildRecord(status=Hot("Aurora", 18, 200))
 
-    @self_skill
+    @single_skill
     def Camouflage(self, **kwargs) -> Record:
         return self._buildRecord(status=Mtg("Camouflage", 20, 0.9))
 
-    @target_skill
+    @single_skill
     def HeartOfCorundum(self, **kwargs) -> Record:
         return self._buildRecord(
             status=[
@@ -186,7 +186,7 @@ class GunBreaker(Tank):
             ]
         )
 
-    @self_skill
+    @single_skill
     def Superbolide(self, **kwargs) -> Record:
         return self._buildRecord(status=Shield("Superbolide", 10, 1000000))
 
@@ -198,19 +198,19 @@ class DarkKnight(Tank):
     def DarkMissionary(self, **kwargs) -> Record:
         return self._buildRecord(status=MagicMtg("DarkMissionary", 15, 0.9))
 
-    @self_skill
+    @single_skill
     def DarkMind(self, **kwargs) -> Record:
         return self._buildRecord(status=MagicMtg("DarkMind", 10, 0.8))
 
-    @target_skill
+    @single_skill
     def TheBlackestNight(self, **kwargs) -> Record:
         return self._buildRecord(status=MaxHpShield("TheBlackestNight", 7, 25))
 
-    @target_skill
+    @single_skill
     def Oblation(self, **kwargs) -> Record:
         return self._buildRecord(status=Mtg("Oblation", 10, 0.9))
 
-    @self_skill
+    @single_skill
     def LivingDead(self, **kwargs) -> Record:
         return self._buildRecord(status=BaseStatus("LivingDead", 10))
 

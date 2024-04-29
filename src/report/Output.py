@@ -3,9 +3,12 @@ from typing import Any
 from pyecharts.charts import Line
 from pyecharts.commons.utils import JsCode
 import pyecharts.options as opts
+import os
 
 from ..models.player import Player
 from ..models.Event import Event
+
+project_root = os.path.dirname(os.path.abspath(__file__))
 
 js_string = """
 function customTooltip(params) {
@@ -13,10 +16,10 @@ function customTooltip(params) {
     let tooltipContent = `time: ${params[0].axisValue}<br/>event: pass<br/>`;
     params.forEach((param, index) => {
         const hpSpan = `<span style="font-family: 'EurostarRegularExtended'; font-size: 14px; vertical-align: middle; width: 70px; display: inline-block; text-align: left;">${param.data[1]}</span>`;
-        const jobImage = `<img src="resources/images/job/${param.data[3]}.png" alt="${param.seriesName}" style="width: 20px; height: 20px;">`;
+        const jobImage = `<img src="app/static/images/job/${param.data[3]}.png" alt="${param.seriesName}" style="width: 20px; height: 20px;">`;
         const skillDetails = Object.entries(param.data[2])
             .map(([skillName, remainingTime]) => {
-                const imgTag = `<img src="resources/images/skill/${skillName}.png" alt="${skillName}" style="width: 15px; height: 20px;">`;
+                const imgTag = `<img src="app/static/images/skill/${skillName}.png" alt="${skillName}" style="width: 15px; height: 20px;">`;
                 const remainingTimeSpan = `<span style="display: block; margin-top: -10px; font-size: 12px;">${remainingTime.toFixed(1)}</span>`;
                 return `<div style="display: inline-block; text-align: center; margin-right: 5px; vertical-align: middle; width: 25px">${imgTag}${remainingTimeSpan}</div>`;
             })
@@ -44,6 +47,7 @@ class Snapshot:
 class Output:
     output = open("output.txt", "w", encoding="utf-8")
     snapshot_list: list[Snapshot] = []
+    result: Line = Line()
 
     @classmethod
     def info(cls, info: str):
@@ -58,19 +62,19 @@ class Output:
         cls.snapshot_list.append(Snapshot(round(time, 2), event, player_info))
 
     @classmethod
-    def show_line(cls):
+    def show_line(cls) -> None:
         time_list = [snapshot.time for snapshot in cls.snapshot_list]
-        line_chart = Line().add_xaxis(time_list)
+        cls.result.add_xaxis(time_list)
 
         for player in cls.snapshot_list[0].player_info.keys():
-            line_chart.add_yaxis(
+            cls.result.add_yaxis(
                 series_name=player,
                 y_axis=[snapshot.player_info[player] for snapshot in cls.snapshot_list],
                 label_opts=opts.LabelOpts(is_show=False),
                 is_symbol_show=False,
             )
 
-        line_chart.set_global_opts(
+        cls.result.set_global_opts(
             title_opts=opts.TitleOpts(title="血量模拟", subtitle="v0.0.1"),
             tooltip_opts=opts.TooltipOpts(
                 trigger="axis",
@@ -105,7 +109,7 @@ class Output:
             }
         `;
         document.head.appendChild(style);
-        """).render()
+        """)
 
     # @classmethod
     # def show_txt_output(cls):
@@ -115,7 +119,7 @@ class Output:
     #         Output.info(
     #             f"After Event {snapshot.event.name} At {cls.__fromTimestamp(snapshot.time)}\n"
     #         )
-    #         # for 
+    #         # for
     #         # Output.info(f"{name}-{str(player)}")
     #     pass
 

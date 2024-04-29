@@ -1,4 +1,4 @@
-from .decorator import pet_skill, target_skill
+from .decorator import pet_skill, single_skill
 from ..Status import (
     DelayHeal,
     HealBonus,
@@ -36,7 +36,7 @@ class RedMage(MagicDPS):
             ]
         )
 
-    @target_skill
+    @single_skill
     def Vercure(self, **kwargs) -> Record:
         return self._buildRecord(value=500)
 

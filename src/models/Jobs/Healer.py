@@ -3,8 +3,7 @@ from .decorator import (
     cost,
     ground_skill,
     pet_skill,
-    self_skill,
-    target_skill,
+    single_skill,
 )
 from ..Status import (Bell, EventType,
     BaseStatus,
@@ -59,7 +58,7 @@ class Scholar(Healer):
         event = self.__dealWithET(event)
         return super().as_event_user(event)
 
-    @self_skill
+    @single_skill
     def Recitation(self, **kwargs) -> Record:
         return self._buildRecord(status=BaseStatus("Recitation", 15))
 
@@ -72,15 +71,15 @@ class Scholar(Healer):
             e.append(Shield("Catalyze", 30, 540))
         return e.apply_buff(self.critNum)
 
-    @self_skill
+    @single_skill
     def Dissipation(self, **kwargs) -> Record:
         return self._buildRecord(status=SpellBonus("Dissipation", 30, 1.2))
 
-    @target_skill
+    @single_skill
     def DeploymentTactics(self, **kwargs) -> Record:
         return self._buildRecord()
 
-    @self_skill
+    @single_skill
     def EmergencyTactics(self, **kwargs) -> Record:
         return self._buildRecord(status=BaseStatus("EmergencyTactics", 15))
 
@@ -93,32 +92,32 @@ class Scholar(Healer):
     # 单奶
 
     @cost("gcd")
-    @target_skill
+    @single_skill
     def Physick(self, **kwargs) -> Record:
         return self._buildRecord(value=450)
 
     @cost("gcd")
-    @target_skill
+    @single_skill
     def Adloquium(self, **kwargs) -> Record:
         return self._buildRecord(value=300, status=Shield("Galvanize", 30, 540))
 
     @cost("ether")
-    @target_skill
+    @single_skill
     def Lustrate(self, **kwargs) -> Record:
         return self._buildRecord(value=600)
 
     @cost("ether")
-    @target_skill
+    @single_skill
     def Excogitation(self, **kwargs) -> Record:
         return self._buildRecord(status=DelayHeal("Excogitation", 45, 800))
 
     @pet_skill
-    @target_skill
+    @single_skill
     def Aetherpact(self, **kwargs) -> Record:
         time = kwargs.get("duration", 0)
         return self._buildRecord(status=Hot("Aetherpact", time, 300))
 
-    @target_skill
+    @single_skill
     def Protraction(self, **kwargs) -> Record:
         return self._buildRecord(status=IncreaseMaxHp("Protraction", 10, 1.1))
 
@@ -183,7 +182,7 @@ class WhiteMage(Healer):
             event.target = allPlayer
         return super().as_event_user(event)
 
-    @self_skill
+    @single_skill
     def PlenaryIndulgence(self, **kwargs) -> Record:
         """全大赦"""
         return self._buildRecord(status=BaseStatus("PlenaryIndulgence", 10))
@@ -205,37 +204,37 @@ class WhiteMage(Healer):
     # 单奶
 
     @cost("gcd")
-    @target_skill
+    @single_skill
     def Cure(self, **kwargs) -> Record:
         return self._buildRecord(value=500)
 
     @cost("gcd")
-    @target_skill
+    @single_skill
     def CureII(self, **kwargs) -> Record:
         return self._buildRecord(value=800)
 
     @cost("gcd")
-    @target_skill
+    @single_skill
     def Regen(self, **kwargs) -> Record:
         return self._buildRecord(status=Hot("Regen", 18, 250))
 
-    @target_skill
+    @single_skill
     def Benediction(self, **kwargs) -> Record:
         return self._buildRecord(value=1000000)
 
-    @target_skill
+    @single_skill
     def AfflatusSolace(self, **kwargs) -> Record:
         return self._buildRecord(value=800)
 
-    @target_skill
+    @single_skill
     def Tetragrammaton(self, **kwargs) -> Record:
         return self._buildRecord(value=700)
 
-    @target_skill
+    @single_skill
     def DivineBenison(self, **kwargs) -> Record:
         return self._buildRecord(status=Shield("DivineBenison", 15, 500))
 
-    @target_skill
+    @single_skill
     def Aquaveil(self, **kwargs) -> Record:
         return self._buildRecord(status=Mtg("Aquaveil", 8, 0.85))
 
@@ -279,7 +278,7 @@ class WhiteMage(Healer):
             ]
         )
 
-    @self_skill
+    @single_skill
     def LiturgyOfTheBell(self, **kwargs) -> Record:
         return self._buildRecord(status=Bell("LiturgyOfTheBell", 20, 5))
 
@@ -302,7 +301,7 @@ class Sage(Healer):
         return super().as_event_user(event)
 
     @cost("gcd")
-    @target_skill
+    @single_skill
     def Dignosis(self, **kwargs) -> Record:
         return self._buildRecord(value=450)
 
@@ -316,7 +315,7 @@ class Sage(Healer):
         )
 
     @cost("gcd")
-    @target_skill
+    @single_skill
     def EkurasianDignosis(self, **kwargs) -> Record:
         return self._buildRecord(value=300, status=Shield("EkurasianDignosis", 30, 540))
 
@@ -326,7 +325,7 @@ class Sage(Healer):
             value=100, status=Shield("EkurasianPrognosis", 30, 320)
         )
 
-    @target_skill
+    @single_skill
     def Druochole(self, **kwargs) -> Record:
         return self._buildRecord(value=600)
 
@@ -338,11 +337,11 @@ class Sage(Healer):
     def Ixochole(self, **kwargs) -> Record:
         return self._buildRecord(value=400)
 
-    @self_skill
+    @single_skill
     def Zoe(self, **kwargs) -> Record:
         return self._buildRecord(status=BaseStatus("Zoe", 30))
 
-    @target_skill
+    @single_skill
     def Taurochole(self, **kwargs) -> Record:
         return self._buildRecord(value=700, status=Mtg("Kerachole", 15, 0.9))
 
@@ -351,14 +350,14 @@ class Sage(Healer):
             value=300, status=[Mtg("Holos", 20, 0.9), Shield("HolosShield", 30, 300)]
         )
 
-    @target_skill
+    @single_skill
     def Krasis(self, **kwargs) -> Record:
         return self._buildRecord(status=HealBonus("Krasis", 10, 1.2))
 
     def Pneuma(self, **kwargs) -> Record:
         return self._buildRecord(value=600)
 
-    @target_skill
+    @single_skill
     def Haima(self, **kwargs) -> Record:
         return self._buildRecord(status=HaimaShield("Haima", 15, 300))
 

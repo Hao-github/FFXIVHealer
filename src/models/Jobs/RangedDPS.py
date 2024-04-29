@@ -1,4 +1,4 @@
-from .decorator import self_skill
+from .decorator import single_skill
 from ..Status import (
     Mtg,
     HealBonus,
@@ -16,7 +16,7 @@ class RangedDPS(Player):
     def Tactician(self, **kwargs) -> Record:
         return self._buildRecord(status=Mtg("Tactician", 15, 0.9))
 
-    @self_skill
+    @single_skill
     def SecondWind(self, **kwargs) -> Record:
         return self._buildRecord(value=500)
 

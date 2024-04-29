@@ -1,4 +1,3 @@
-import src.Fight as Fight
 from ..Record import Record
 from ..Status import EventType, Hot
 
@@ -12,11 +11,10 @@ def pet_skill(func):
     return wrapper
 
 
-def target_skill(func):
+def single_skill(func):
     def wrapper(self, *args, **kwargs):
         ret: Record = func(self, *args, **kwargs)
-        event = ret.eventList[0]
-        event.target = Fight.Fight.member.get(kwargs.get("target", None), self)
+        ret.eventList[0].target = kwargs.get("target", self)
         return ret
 
     return wrapper
@@ -29,16 +27,6 @@ def ground_skill(func):
             if isinstance(status, Hot):
                 status.isGround = True
         ret.eventList[0].eventType = EventType.GroundInit
-        return ret
-
-    return wrapper
-
-
-def self_skill(func):
-    def wrapper(self, *args, **kwargs):
-        ret: Record = func(self, *args, **kwargs)
-        for event in ret.eventList:
-            event.target = self
         return ret
 
     return wrapper

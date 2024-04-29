@@ -1,4 +1,4 @@
-from .decorator import self_skill
+from .decorator import single_skill
 from ..Status import (
     HealBonus,
     MagicMtg,
@@ -28,7 +28,7 @@ class MeleeDPS(Player):
             ]
         )
 
-    @self_skill
+    @single_skill
     def SecondWind(self, **kwargs) -> Record:
         return self._buildRecord(value=500)
 
@@ -37,7 +37,7 @@ class Monk(MeleeDPS):
     def __init__(self, hp: int, damage_per_potency: float) -> None:
         super().__init__("Monk", hp, damage_per_potency)
 
-    @self_skill
+    @single_skill
     def RiddleOfEarth(self, **kwargs) -> Record:
         return self._buildRecord(status=Mtg("RiddleOfEarth", 10, 0.8))
 
@@ -54,7 +54,7 @@ class Samurai(MeleeDPS):
     def __init__(self, hp: int, damage_per_potency: float) -> None:
         super().__init__("Samurai", hp, damage_per_potency)
 
-    @self_skill
+    @single_skill
     def ThirdEye(self, **kwargs) -> Record:
         return self._buildRecord(status=Mtg("ThirdEye", 4, 0.9))
 
@@ -63,7 +63,7 @@ class Ninja(MeleeDPS):
     def __init__(self, hp: int, damage_per_potency: float) -> None:
         super().__init__("Ninja", hp, damage_per_potency)
 
-    @self_skill
+    @single_skill
     def ShadeShift(self, **kwargs) -> Record:
         return self._buildRecord(status=MaxHpShield("ShadeShift", 20, 20))
 
@@ -72,7 +72,7 @@ class Reaper(MeleeDPS):
     def __init__(self, hp: int, damage_per_potency: float) -> None:
         super().__init__("Reaper", hp, damage_per_potency, 0.73)
 
-    @self_skill
+    @single_skill
     def ArcaneCrest(self, **kwargs) -> Record:
         # TODO: 未添加hot
         return self._buildRecord(status=MaxHpShield("ArcaneCrest", 5, 10))

@@ -1,63 +1,72 @@
 import pandas as pd
 import re
-from .report.evaluation import Evaluation
+from .report.Evaluation import Evaluation
 from .models.player import allPlayer, Player
 from .models.Event import Event
 from .models.Record import RecordQueue, Record
 from .report.Output import Output
-from .models.Jobs import * # noqa: F403
+from .models.Jobs.constant import JOB_CLASSES
 
 
-class Fight:
-    member: dict[str, Player] = {}
-    record_queue: RecordQueue = RecordQueue()
-
-    @classmethod
-    def addbaseCofig(cls, excel_file: str) -> None:
-        dfDict = pd.read_excel(excel_file, sheet_name=None)
-        dfDict["小队列表"].apply(cls.__row_to_player, axis=1)
-        dfDict["BOSS时间轴"].apply(cls.__row_to_boss_record, axis=1)
-        for r in dfDict["奶轴"].merge(dfDict["技能"], on="name").to_dict("records"):
-            cls.record_queue.push(
-                cls.__to_timestamp(r["time"]),
-                getattr(Fight.member[r["user"]], r["skillName"])(**r),
+class Simulation:
+    def __init__(self, translate_df: pd.DataFrame, player_df: pd.DataFrame) -> None:
+        self.member: dict[str, Player] = {}
+        self.record_queue: RecordQueue = RecordQueue()
+        self.translate_df: pd.DataFrame = translate_df
+        for _, row in player_df.iterrows():
+            self.member[row["name"]] = JOB_CLASSES[row["job"]](
+                row["hp"], row["damagePerPotency"]
             )
 
-    @classmethod
-    def run(cls, step: float):
-        if not cls.member or cls.record_queue.empty():
+    def add_raid_timeline(self, raid_df: pd.DataFrame):
+        boss: Player = Player("boss", 0, 0, 0, 0)
+        for _, row in raid_df.iterrows():
+            target: str = row["target"]
+            time = self.__to_timestamp(row["prepareTime"])
+            event = Event.from_row(
+                row, boss, allPlayer if target == "all" else self.member[target]
+            )
+            self.record_queue.push(time, Record([event], delay=row["delay"]))
+
+    def add_healing_timeline(self, healing_df: pd.DataFrame):
+        for row in healing_df.merge(self.translate_df, on="name").to_dict("records"):
+            time = self.__to_timestamp(row["time"])
+            row["target"] = self.member[row["target"] if not pd.isna(row["target"]) else row["user"]]
+            self.record_queue.push(
+                time, getattr(self.member[row["user"]], row["skillName"])(**row)
+            )
+
+    def run(self, step: float):
+        if not self.member or self.record_queue.empty():
             return
 
         time: float = -3
         while True:
             # 检查buff, 如果dot和hot跳了, 或者延迟治疗时间到了, 就产生立即的prepare事件
-            cls.__update_member_statuses(step, time)
+            self.__update_member_statuses(step, time)
             # 如果当前时间大于等于最近的事件的发生时间
-            while time >= cls.record_queue.next_record_time:
-                record = cls.record_queue.pop()
+            while time >= self.record_queue.next_record_time:
+                record = self.record_queue.pop()
                 if not record.prepared:
-                    cls.record_queue.push(
-                        time + record.delay, cls.__for_unprepared_record(record)
+                    self.record_queue.push(
+                        time + record.delay, self.__for_unprepared_record(record)
                     )
                 else:
                     Evaluation.update(record)
-                    cls.__for_prepared_record(record, time)
-                    Output.add_snapshot(time, cls.member, record.eventList[0])
+                    self.__for_prepared_record(record, time)
+                    Output.add_snapshot(time, self.member, record.eventList[0])
 
-                if cls.record_queue.empty():
-                    Output.show_line()
+                if self.record_queue.empty():
                     return
 
             time += step
 
-    @classmethod
-    def __update_member_statuses(cls, step: float, time: float):
-        updates: list[Event] = sum((m.update(step) for m in cls.member.values()), [])
+    def __update_member_statuses(self, step: float, time: float):
+        updates: list[Event] = sum((m.update(step) for m in self.member.values()), [])
         if updates:
-            cls.record_queue.push(time, Record(updates, fromHot=True))
+            self.record_queue.push(time, Record(updates, fromHot=True))
 
-    @classmethod
-    def __for_unprepared_record(cls, record: Record) -> Record:
+    def __for_unprepared_record(self, record: Record) -> Record:
         record.prepared = True
         newEventList: list[Event] = []
         for event in record.eventList:
@@ -65,37 +74,19 @@ class Fight:
             if event.target != allPlayer:
                 newEventList.append(event.target.as_event_target(event))
             else:
-                for player in cls.member.values():
+                for player in self.member.values():
                     newEventList.append(player.as_event_target(event.copy(player)))
         record.eventList = newEventList
 
         return record
 
-    @classmethod
-    def __for_prepared_record(cls, record: Record, time: float) -> None:
+    def __for_prepared_record(self, record: Record, time: float) -> None:
         for event in record.eventList:
             ret = event.target.deal_with_ready_event(event)
             if ret is False:
                 Output.info(f"{event.target}可能会或已经在{round(time, 2)}死亡")
             elif ret is not True:
-                cls.record_queue.push(time, Record([ret]))
-
-    @classmethod
-    def __row_to_player(cls, row: pd.Series):
-        cls.member[row["name"]] = eval(row["job"])(row["hp"], row["damagePerPotency"])
-        return 0
-
-    @classmethod
-    def __row_to_boss_record(cls, row: pd.Series):
-        event = Event.fromRow(
-            row,
-            Player("boss", 0, 0, 0, 0),
-            allPlayer if row["target"] == "all" else cls.member[row["target"]],
-        )
-        cls.record_queue.push(
-            cls.__to_timestamp(row["prepareTime"]), Record([event], delay=row["delay"])
-        )
-        return 0
+                self.record_queue.push(time, Record([ret]))
 
     @staticmethod
     def __to_timestamp(raw_time: str) -> float:
