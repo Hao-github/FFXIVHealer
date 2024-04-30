@@ -1,29 +1,32 @@
-import pandas as pd
 import re
+from functools import partial
+
+import pandas as pd
+
+from .report.Output import Output
 from .report.Evaluation import Evaluation
 from .models.player import allPlayer, Player
 from .models.Event import Event
 from .models.Record import RecordQueue, Record
-from .report.Output import Output
 from .models.Jobs.constant import JOB_CLASSES
 
 
 class Simulation:
     def __init__(self, player_df: pd.DataFrame) -> None:
-        self.member: dict[str, Player] = {}
+        self.member:dict[str, Player] = {
+            row["name"]: JOB_CLASSES[row["job"]](row["hp"], row["damagePerPotency"])
+            for _, row in player_df.iterrows()
+        }
         self.record_queue: RecordQueue = RecordQueue()
-        for _, row in player_df.iterrows():
-            self.member[row["name"]] = JOB_CLASSES[row["job"]](
-                row["hp"], row["damagePerPotency"]
-            )
+        self.output: Output = Output()
 
     def add_raid_timeline(self, raid_df: pd.DataFrame):
-        boss: Player = Player("boss", 0, 0, 0, 0)
+        create_event = partial(Event.from_row, user=Player("boss", 0, 0, 0, 0))
         for _, row in raid_df.iterrows():
             target: str = row["target"]
             time = self.__to_timestamp(row["prepareTime"])
-            event = Event.from_row(
-                row, boss, allPlayer if target == "all" else self.member[target]
+            event = create_event(
+                row, target=allPlayer if target == "all" else self.member[target]
             )
             self.record_queue.push(time, Record([event], delay=row["delay"]))
 
@@ -39,7 +42,7 @@ class Simulation:
 
     def run(self, step: float):
         if not self.member or self.record_queue.empty():
-            return
+            return self.output
 
         time: float = -3
         while True:
@@ -55,10 +58,10 @@ class Simulation:
                 else:
                     Evaluation.update(record)
                     self.__for_prepared_record(record, time)
-                    Output.add_snapshot(time, self.member, record.eventList[0])
+                    self.output.add_snapshot(time, self.member, record.eventList[0])
 
                 if self.record_queue.empty():
-                    return
+                    return self.output
 
             time += step
 
@@ -85,7 +88,7 @@ class Simulation:
         for event in record.eventList:
             ret = event.target.deal_with_ready_event(event)
             if ret is False:
-                Output.info(f"{event.target}可能会或已经在{round(time, 2)}死亡")
+                self.output.info(f"{event.target}可能会或已经在{round(time, 2)}死亡")
             elif ret is not True:
                 self.record_queue.push(time, Record([ret]))
 

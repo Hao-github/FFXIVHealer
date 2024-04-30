@@ -45,36 +45,35 @@ class Snapshot:
 
 
 class Output:
-    output = open("output.txt", "w", encoding="utf-8")
-    snapshot_list: list[Snapshot] = []
-    result: Line = Line()
+    def __init__(self) -> None:
+        self.output = open("output.txt", "w", encoding="utf-8")
+        self.snapshot_list: list[Snapshot] = []
 
-    @classmethod
-    def info(cls, info: str):
-        cls.output.write(info)
+    def info(self, info: str):
+        self.output.write(info)
 
-    @classmethod
-    def add_snapshot(cls, time: float, player_list: dict[str, Player], event: Event):
+    def add_snapshot(self, time: float, player_list: dict[str, Player], event: Event):
         player_info = {
             name: {"hp": player.hp, "extra": player.remaining_status, "job": player.job}
             for name, player in player_list.items()
         }
-        cls.snapshot_list.append(Snapshot(round(time, 2), event, player_info))
+        self.snapshot_list.append(Snapshot(round(time, 2), event, player_info))
 
-    @classmethod
-    def show_line(cls) -> None:
-        time_list = [snapshot.time for snapshot in cls.snapshot_list]
-        cls.result.add_xaxis(time_list)
+    def show_line(self) -> Line:
+        time_list = [snapshot.time for snapshot in self.snapshot_list]
+        result = Line().add_xaxis(time_list)
 
-        for player in cls.snapshot_list[0].player_info.keys():
-            cls.result.add_yaxis(
+        for player in self.snapshot_list[0].player_info.keys():
+            result.add_yaxis(
                 series_name=player,
-                y_axis=[snapshot.player_info[player] for snapshot in cls.snapshot_list],
+                y_axis=[
+                    snapshot.player_info[player] for snapshot in self.snapshot_list
+                ],
                 label_opts=opts.LabelOpts(is_show=False),
                 is_symbol_show=False,
             )
 
-        cls.result.set_global_opts(
+        result.set_global_opts(
             title_opts=opts.TitleOpts(title="血量模拟", subtitle="v0.0.1"),
             tooltip_opts=opts.TooltipOpts(
                 trigger="axis",
@@ -110,14 +109,16 @@ class Output:
         `;
         document.head.appendChild(style);
         """)
+        
+        return result
 
     # @classmethod
-    # def show_txt_output(cls):
-    #     for snapshot in cls.snapshot_list:
+    # def show_txt_output(self):
+    #     for snapshot in self.snapshot_list:
     #         if snapshot.event.name_is("naturalHeal"):
     #             continue
     #         Output.info(
-    #             f"After Event {snapshot.event.name} At {cls.__fromTimestamp(snapshot.time)}\n"
+    #             f"After Event {snapshot.event.name} At {self.__fromTimestamp(snapshot.time)}\n"
     #         )
     #         # for
     #         # Output.info(f"{name}-{str(player)}")
