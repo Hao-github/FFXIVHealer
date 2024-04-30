@@ -9,10 +9,9 @@ from .models.Jobs.constant import JOB_CLASSES
 
 
 class Simulation:
-    def __init__(self, translate_df: pd.DataFrame, player_df: pd.DataFrame) -> None:
+    def __init__(self, player_df: pd.DataFrame) -> None:
         self.member: dict[str, Player] = {}
         self.record_queue: RecordQueue = RecordQueue()
-        self.translate_df: pd.DataFrame = translate_df
         for _, row in player_df.iterrows():
             self.member[row["name"]] = JOB_CLASSES[row["job"]](
                 row["hp"], row["damagePerPotency"]
@@ -29,9 +28,11 @@ class Simulation:
             self.record_queue.push(time, Record([event], delay=row["delay"]))
 
     def add_healing_timeline(self, healing_df: pd.DataFrame):
-        for row in healing_df.merge(self.translate_df, on="name").to_dict("records"):
+        for row in healing_df.to_dict("records"):
             time = self.__to_timestamp(row["time"])
-            row["target"] = self.member[row["target"] if not pd.isna(row["target"]) else row["user"]]
+            row["target"] = self.member[
+                row["target"] if not pd.isna(row["target"]) else row["user"]
+            ]
             self.record_queue.push(
                 time, getattr(self.member[row["user"]], row["skillName"])(**row)
             )
