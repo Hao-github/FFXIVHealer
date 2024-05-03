@@ -8,27 +8,26 @@ from .report.Evaluation import Evaluation
 from .models.player import allPlayer, Player
 from .models.Event import Event
 from .models.Record import RecordQueue, Record
-from .models.Jobs.constant import JOB_CLASSES
+from .models.Jobs.constant import STR2JOB_CLASSES
 
 
 class Simulation:
     def __init__(self, player_df: pd.DataFrame) -> None:
-        self.member:dict[str, Player] = {
-            row["name"]: JOB_CLASSES[row["job"]](row["hp"], row["damagePerPotency"])
+        self.member: dict[str, Player] = {
+            row["name"]: STR2JOB_CLASSES[row["job"]](row["hp"], row["damagePerPotency"])
             for _, row in player_df.iterrows()
         }
         self.record_queue: RecordQueue = RecordQueue()
         self.output: Output = Output()
+        self.evaluation: Evaluation = Evaluation()
 
     def add_raid_timeline(self, raid_df: pd.DataFrame):
         create_event = partial(Event.from_row, user=Player("boss", 0, 0, 0, 0))
         for _, row in raid_df.iterrows():
-            target: str = row["target"]
             time = self.__to_timestamp(row["prepareTime"])
-            event = create_event(
-                row, target=allPlayer if target == "all" else self.member[target]
-            )
+            event = create_event(row, target=self.member.get(row["target"], allPlayer))
             self.record_queue.push(time, Record([event], delay=row["delay"]))
+        return self
 
     def add_healing_timeline(self, healing_df: pd.DataFrame):
         for row in healing_df.to_dict("records"):
@@ -39,10 +38,11 @@ class Simulation:
             self.record_queue.push(
                 time, getattr(self.member[row["user"]], row["skillName"])(**row)
             )
+        return self
 
-    def run(self, step: float):
+    def run(self, step: float) -> tuple[Output, Evaluation]:
         if not self.member or self.record_queue.empty():
-            return self.output
+            return self.output, self.evaluation
 
         time: float = -3
         while True:
@@ -53,15 +53,14 @@ class Simulation:
                 record = self.record_queue.pop()
                 if not record.prepared:
                     self.record_queue.push(
-                        time + record.delay, self.__for_unprepared_record(record)
+                        time + record.delay, self.__prepare_record(record)
                     )
                 else:
-                    Evaluation.update(record)
-                    self.__for_prepared_record(record, time)
+                    self.__execute_record(record, time)
                     self.output.add_snapshot(time, self.member, record.eventList[0])
 
                 if self.record_queue.empty():
-                    return self.output
+                    return self.output, self.evaluation
 
             time += step
 
@@ -70,7 +69,7 @@ class Simulation:
         if updates:
             self.record_queue.push(time, Record(updates, fromHot=True))
 
-    def __for_unprepared_record(self, record: Record) -> Record:
+    def __prepare_record(self, record: Record) -> Record:
         record.prepared = True
         newEventList: list[Event] = []
         for event in record.eventList:
@@ -84,11 +83,12 @@ class Simulation:
 
         return record
 
-    def __for_prepared_record(self, record: Record, time: float) -> None:
+    def __execute_record(self, record: Record, time: float) -> None:
+        self.evaluation.update(record, time)
         for event in record.eventList:
             ret = event.target.deal_with_ready_event(event)
             if ret is False:
-                self.output.info(f"{event.target}可能会或已经在{round(time, 2)}死亡")
+                self.evaluation.warningDanger(event.target, time)
             elif ret is not True:
                 self.record_queue.push(time, Record([ret]))
 

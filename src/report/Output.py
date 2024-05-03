@@ -46,11 +46,7 @@ class Snapshot:
 
 class Output:
     def __init__(self) -> None:
-        self.output = open("output.txt", "w", encoding="utf-8")
         self.snapshot_list: list[Snapshot] = []
-
-    def info(self, info: str):
-        self.output.write(info)
 
     def add_snapshot(self, time: float, player_list: dict[str, Player], event: Event):
         player_info = {
@@ -79,10 +75,10 @@ class Output:
                 trigger="axis",
                 formatter=JsCode(js_string),
                 textstyle_opts=opts.TextStyleOpts(font_family="AxisStdExtralight"),
-                position=JsCode("""
-                function (point, params, dom, rect, size) {
-                    return ['10%', '10%']
-                }"""),
+                # position=JsCode("""
+                # function (point, params, dom, rect, size) {
+                #     return ['10%', '10%']
+                # }"""),
             ),
             xaxis_opts=opts.AxisOpts(
                 type_="value", min_=time_list[0], max_=time_list[-1]
@@ -109,25 +105,5 @@ class Output:
         `;
         document.head.appendChild(style);
         """)
-        
+
         return result
-
-    # @classmethod
-    # def show_txt_output(self):
-    #     for snapshot in self.snapshot_list:
-    #         if snapshot.event.name_is("naturalHeal"):
-    #             continue
-    #         Output.info(
-    #             f"After Event {snapshot.event.name} At {self.__fromTimestamp(snapshot.time)}\n"
-    #         )
-    #         # for
-    #         # Output.info(f"{name}-{str(player)}")
-    #     pass
-
-    # @staticmethod
-    # def __fromTimestamp(rawTime: float) -> str:
-    #     begin = ""
-    #     if rawTime < 0:
-    #         begin = "-"
-    #         rawTime = -rawTime
-    #     return f"{begin}{int(rawTime // 60)}:{round(rawTime % 60, 3)}"

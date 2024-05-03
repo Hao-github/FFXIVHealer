@@ -13,7 +13,6 @@ from .Status import (
     PhysicMtg,
     MaxHpShield,
 )
-
 from .StatusList import StatusList
 
 

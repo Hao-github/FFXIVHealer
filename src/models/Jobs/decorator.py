@@ -1,4 +1,4 @@
-from ..Record import Record
+from ..Record import T, Record
 from ..Status import EventType, Hot
 
 
@@ -32,11 +32,11 @@ def ground_skill(func):
     return wrapper
 
 
-def cost(costType: str):
+def cost(costType: T):
     def costCal(func):
         def wrapper(self, *args, **kwargs):
             ret: Record = func(self, *args, **kwargs)
-            ret.cost = getattr(self, costType + "_potency")
+            ret.costType = costType
             return ret
 
         return wrapper

@@ -7,3 +7,4 @@ output.txt
 /render.html
 /pyproject.toml
 /tests/
+*.ipynb
