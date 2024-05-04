@@ -2,6 +2,7 @@ import streamlit as st
 from streamlit.components.v1 import html
 
 from src.Simulation import Simulation
+from src.st_components.database_handler import DatabaseHandler
 from src.st_components.players_expander import get_players_df
 from src.st_components.raid_tab import get_raid_table
 from src.st_components.healing_tab import get_healing_table
@@ -9,12 +10,13 @@ from src.st_components.st_utils import translate_df
 
 
 def main():
+    db_handler = DatabaseHandler()
     raid_tab, healing_tab, result_tab, other_tab = st.tabs(
         ["BOSS时间轴", "奶轴编辑", "结果折线图", "其他事项"]
     )
 
     with raid_tab:
-        raid_df = get_raid_table()
+        raid_df = get_raid_table(db_handler)
         if raid_df.empty:
             return
 
@@ -24,8 +26,8 @@ def main():
             return
 
     click_run = st.sidebar.button("RUN!", type="primary")
-    player_df = get_players_df()
-
+    player_df = get_players_df(db_handler)
+    st.write(translate_df)
     if click_run:
         output, evaluation = (
             Simulation(player_df)
@@ -44,4 +46,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    

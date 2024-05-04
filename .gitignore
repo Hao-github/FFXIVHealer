@@ -8,3 +8,5 @@ output.txt
 /pyproject.toml
 /tests/
 *.ipynb
+/cache
+/config.ini
