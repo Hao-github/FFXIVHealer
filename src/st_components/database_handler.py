@@ -23,6 +23,16 @@ class DatabaseHandler:
             f"postgresql://{user}:{password}@{host}:{port}/{database}"
         )
 
-    # @st.cache_data
     def query(self, query_string: str):
         return pd.read_sql_query(query_string, self.engine)
+
+    def add_to_database(self, df: pd.DataFrame, name: str):
+        df.to_sql(name, self.engine, if_exists="replace", index=False)
+
+    def query_chinese_healing_timeline(self):
+        x = r"""SELECT
+    en_name AS "name","time","target",duration,"user",kwargs
+    FROM
+    test_healing_timeline
+    LEFT JOIN skill_translate on test_healing_timeline.name = skill_translate.cn_name;"""
+        return self.query(x)

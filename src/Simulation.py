@@ -44,7 +44,7 @@ class Simulation:
                 row["target"] if not pd.isna(row["target"]) else row["user"]
             ]
             # 获取用户的技能方法
-            skill_method = getattr(self.member[row["user"]], row["skillName"])
+            skill_method = getattr(self.member[row["user"]], row["name"])
             # 将事件推送到记录队列中
             self.record_queue.push(time, skill_method(**row))
         return self

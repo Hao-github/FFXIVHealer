@@ -1,16 +1,14 @@
-import os
-
 import pandas as pd
 import streamlit as st
 
 from src.st_components.database_handler import DatabaseHandler
 
-from .st_utils import resources_dir, load_data
+
+player_db_str = "test_player_info"
 
 
 def get_players_df(db_handler: DatabaseHandler):
-    default_df_path = os.path.join(resources_dir, "default.csv")
-    default_df = load_data(default_df_path)
+    default_df = db_handler.query(f"SELECT * FROM {player_db_str}")
     if "player_df" not in st.session_state:
         st.session_state["player_df"] = default_df
 
@@ -49,8 +47,8 @@ def get_players_df(db_handler: DatabaseHandler):
                         step=0.01,
                         max_value=2.5,
                         min_value=2.14,
-                        key=f"{row['name']}_spellSpeed",
-                        value=row["spellSpeed"],
+                        key=f"{row['name']}_spellspeed",
+                        value=row["spellspeed"],
                     )
         if st.button("Save"):
             st.session_state["player_df"] = pd.DataFrame(
@@ -60,12 +58,12 @@ def get_players_df(db_handler: DatabaseHandler):
                         st.session_state.get(f"{name}_job"),
                         st.session_state.get(f"{name}_max_hp"),
                         st.session_state.get(f"{name}_potency"),
-                        st.session_state.get(f"{name}_spellSpeed", 2.5),
+                        st.session_state.get(f"{name}_spellspeed", 2.5),
                     ]
                     for name in default_df["name"]
                 ],
                 columns=default_df.columns,
             )
-            st.session_state["player_df"].to_csv(default_df_path)
+            db_handler.add_to_database(st.session_state["player_df"], player_db_str)
 
         return st.session_state["player_df"]

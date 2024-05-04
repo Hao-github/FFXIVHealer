@@ -6,7 +6,6 @@ from src.st_components.database_handler import DatabaseHandler
 from src.st_components.players_expander import get_players_df
 from src.st_components.raid_tab import get_raid_table
 from src.st_components.healing_tab import get_healing_table
-from src.st_components.st_utils import translate_df
 
 
 def main():
@@ -21,18 +20,17 @@ def main():
             return
 
     with healing_tab:
-        healing_df = get_healing_table()
+        healing_df = get_healing_table(db_handler)
         if healing_df.empty:
             return
 
     click_run = st.sidebar.button("RUN!", type="primary")
     player_df = get_players_df(db_handler)
-    st.write(translate_df)
     if click_run:
         output, evaluation = (
             Simulation(player_df)
             .add_raid_timeline(raid_df)
-            .add_healing_timeline(healing_df.merge(translate_df, on="name"))
+            .add_healing_timeline(db_handler.query_chinese_healing_timeline())
             .run(0.01)
         )
         with result_tab:
