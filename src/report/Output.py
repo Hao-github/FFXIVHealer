@@ -3,17 +3,14 @@ from typing import Any
 from pyecharts.charts import Line
 from pyecharts.commons.utils import JsCode
 import pyecharts.options as opts
-import os
 
 from ..models.player import Player
 from ..models.Event import Event
 
-project_root = os.path.dirname(os.path.abspath(__file__))
-
 js_string = """
 function customTooltip(params) {
     console.log(params);
-    let tooltipContent = `time: ${params[0].axisValue}<br/>event: pass<br/>`;
+    let tooltipContent = `time: ${params[0].axisValue}<br/>event: ${params[0].data[4]}<br/>`;
     params.forEach((param, index) => {
         const hpSpan = `<span style="font-family: 'EurostarRegularExtended'; font-size: 14px; vertical-align: middle; width: 70px; display: inline-block; text-align: left;">${param.data[1]}</span>`;
         const jobImage = `<img src="app/static/images/job/${param.data[3]}.png" alt="${param.seriesName}" style="width: 20px; height: 20px;">`;
@@ -50,7 +47,12 @@ class Output:
 
     def add_snapshot(self, time: float, player_list: dict[str, Player], event: Event):
         player_info = {
-            name: {"hp": player.hp, "extra": player.remaining_status, "job": player.job}
+            name: {
+                "hp": player.hp,
+                "extra": player.remaining_status,
+                "job": player.job,
+                "event": event.name,
+            }
             for name, player in player_list.items()
         }
         self.snapshot_list.append(Snapshot(round(time, 2), event, player_info))
@@ -96,11 +98,11 @@ class Output:
         style.innerHTML = `
             @font-face {
                 font-family: 'EurostarRegularExtended';
-                src: url('resources/fonts/eurostarregularextended.ttf') format('truetype');
+                src: url('app/static/fonts/eurostarregularextended.ttf') format('truetype');
             }
             @font-face {
                 font-family: 'AxisStdExtralight';
-                src: url('resources/fonts/axisstd-extralight.otf') format('opentype');
+                src: url('app/static/fonts/axisstd-extralight.otf') format('opentype');
             }
         `;
         document.head.appendChild(style);

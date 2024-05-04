@@ -1,4 +1,4 @@
-,name,job,hp,damagePerPotency,spellSpeed
+,name,job,hp,potency,spellSpeed
 0,MT,DarkKnight,130000,22.040000000000006,2.5
 1,ST,DarkKnight,130000,22.0,2.5
 2,H1,WhiteMage,80000,32.0,2.4

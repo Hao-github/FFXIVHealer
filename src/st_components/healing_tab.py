@@ -1,6 +1,6 @@
 import pandas as pd
 import streamlit as st
-from .utils import members
+from .st_utils import members
 
 
 def upload_file() -> pd.DataFrame:

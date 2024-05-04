@@ -4,7 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from ..models.Jobs.constant import STR2JOB_CLASSES
-from .utils import resources_dir, load_data
+from .st_utils import resources_dir, load_data
 
 
 def get_players_df():
@@ -42,7 +42,7 @@ def get_players_df():
                     step=0.01,
                     min_value=0.0,
                     key=f"{position}_potency",
-                    value=float(default_df.at[i, "damagePerPotency"]),
+                    value=float(default_df.at[i, "potency"]),
                 )
                 if selected_job in ["Scholar", "WhiteMage", "Sage"]:
                     st.number_input(

@@ -2,7 +2,7 @@ import os
 import json
 import pandas as pd
 import streamlit as st
-from .utils import load_data, resources_dir
+from .st_utils import load_data, resources_dir
 
 
 # 创建解析JSON字符串的函数
@@ -51,10 +51,10 @@ def get_raid_table() -> pd.DataFrame:
         ),
         use_container_width=True,
         hide_index=True,
-        column_order=["prepareTime", "name", "damage", "target", "extra_info"],
+        column_order=["prepare_time", "name", "damage", "target", "extra_info"],
         column_config={
             "name": st.column_config.TextColumn("伤害名"),
-            "prepareTime": st.column_config.TextColumn("释放时间"),
+            "prepare_time": st.column_config.TextColumn("释放时间"),
             "damage": st.column_config.NumberColumn("伤害数值"),
             "target": st.column_config.TextColumn("目标"),
             "extra_info": st.column_config.TextColumn("其他", width="large"),

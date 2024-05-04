@@ -3,9 +3,9 @@ from streamlit.components.v1 import html
 
 from src.Simulation import Simulation
 from src.st_components.players_expander import get_players_df
-from src.st_components.raid_table import get_raid_table
-from src.st_components.healing_table import get_healing_table
-from src.st_components.utils import translate_df
+from src.st_components.raid_tab import get_raid_table
+from src.st_components.healing_tab import get_healing_table
+from src.st_components.st_utils import translate_df
 
 
 def main():
@@ -37,10 +37,9 @@ def main():
             html(output.show_line().render_embed(), width=800, height=600)
         with other_tab:
             st.write("暂时没写好，搁置")
-            st.write(evaluation.gcdCost)
+            st.write(evaluation.gcd_cost)
             st.write(evaluation.cooperation)
             st.write(evaluation.tolerance)
-            st.write(evaluation.gcdCostList)
 
 
 if __name__ == "__main__":

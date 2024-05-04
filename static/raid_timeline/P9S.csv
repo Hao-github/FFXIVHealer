@@ -1,4 +1,4 @@
-name,prepareTime,delay,type,damage,target,extra_info
+name,prepare_time,delay,type,damage,target,extra_info
 暴食预兆,00:11.996,0.669,magic,102000,ALL,
 攻击,00:14.670,0.844,physics,53000,MT,
 灵魂涌动,00:31.120,0.623,magic,88000,ALL,
