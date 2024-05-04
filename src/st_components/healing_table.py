@@ -1,5 +1,3 @@
-from io import BytesIO
-
 import pandas as pd
 import streamlit as st
 from .utils import members
@@ -35,6 +33,7 @@ def edit_healing_df(df: pd.DataFrame) -> pd.DataFrame:
         key="healing_df_editor",
         num_rows="dynamic",
         use_container_width=True,
+        column_order=["time", "name", "user", "target", "duration", "kwargs"],
         column_config={
             "user": st.column_config.SelectboxColumn(
                 "释放者",
@@ -66,32 +65,6 @@ def edit_healing_df(df: pd.DataFrame) -> pd.DataFrame:
     return res
 
 
-def download_healing_df():
-    """
-    保存编辑后的奶轴 DataFrame，并提供下载按钮。
-
-    Args:
-        df (pd.DataFrame): 编辑后的 DataFrame。
-    """
-
-    # 定义一个下载文件的回调函数
-    def to_excel():
-        # 使用 pandas 的 to_excel 方法将 DataFrame 保存为 Excel 文件
-        buffer = BytesIO()
-        st.session_state["healing_df"].to_excel(buffer, index=False)
-        buffer.seek(0)
-        return buffer
-
-    if "healing_df" in st.session_state:
-    # 使用 Streamlit 的 download_button 组件提供下载按钮
-        st.download_button(
-            label="下载奶轴",
-            data=to_excel(),
-            file_name="edited_healing_data.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-
-
 def get_healing_table() -> pd.DataFrame:
     """
     获取并编辑奶轴数据。
@@ -108,9 +81,6 @@ def get_healing_table() -> pd.DataFrame:
 
     # 编辑数据
     edited_df = edit_healing_df(df)
-
-    # 保存编辑后的数据
-    download_healing_df()
 
     # 更新 session state 中的奶轴 DataFrame
     st.session_state["healing_df"] = edited_df

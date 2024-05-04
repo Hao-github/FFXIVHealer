@@ -29,14 +29,7 @@ class Record:
         """
         self.prepared: bool = False
 
-    def __str__(self) -> str:
-        """返回事件的字符串表示形式。
 
-        Returns:
-            str: 包含延迟时间和事件列表的字符串表示。
-        """
-        events_str = ", ".join(str(event) for event in self.eventList)
-        return f"delay: {self.delay}, eventList: [{events_str}]"
 class RecordQueue:
     """用于管理记录的优先级队列。
 

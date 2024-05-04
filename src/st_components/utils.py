@@ -10,5 +10,5 @@ def load_data(df_str: str) -> pd.DataFrame:
 
 
 resources_dir = os.path.join(os.getcwd(), "static")
-members = ["mt", "st", "h1", "h2", "d1", "d2", "d3", "d4"]
+members = ["MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4"]
 translate_df = load_data(os.path.join(resources_dir, "locale", "skill.csv"))

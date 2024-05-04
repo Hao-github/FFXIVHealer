@@ -17,7 +17,7 @@ class Evaluation:
                 getattr(user, (record.costType + "_potency"), 0)
                 * user.damage_per_potency
             )
-        if not record.fromHot and user.name not in ["h1", "h2"]:
+        if not record.fromHot and user.name not in ["H1", "H2"]:
             self.cooperation += 1
 
     def warningDanger(self, player: Player, time: float):

@@ -58,33 +58,32 @@ class Player:
             case EventType.Heal | EventType.GroundHeal:
                 event.apply_buff(self.calPct(HealBonus))
             case EventType.MagicDmg:
-                event.apply_buff(self.calPct(MagicMtg))
-                event.value = self.calculate_damage_after_shield(int(event.value))
+                mtg_pct = self.calPct(MagicMtg)
+                event.reduced_pct = mtg_pct
+                event.apply_buff(mtg_pct)
+                event = self.calculate_shield_reduced(event)
             case EventType.PhysicDmg:
-                event.apply_buff(self.calPct(PhysicMtg))
-                event.value = self.calculate_damage_after_shield(int(event.value))
+                mtg_pct = self.calPct(PhysicMtg)
+                event.reduced_pct = mtg_pct
+                event.apply_buff(mtg_pct)
+                event = self.calculate_shield_reduced(event)
             case EventType.TrueDamage:
-                event.value = self.calculate_damage_after_shield(int(event.value))
+                event = self.calculate_shield_reduced(event)
         return event
 
-    def calculate_damage_after_shield(self, damage: int) -> int:
-        """Calculates the remaining damage after applying shields.
-
-        Args:
-            damage: The incoming damage to be reduced by shields.
-
-        Returns:
-            The remaining damage after shields are applied.
-        """
+    def calculate_shield_reduced(self, event: Event) -> Event:
+        origin_damage = int(event.value)
         for shield in self.status_list.shield_list:
-            if shield.value > damage:
+            if shield.value > event.value:
                 # Reduce shield value by damage and return 0 as no remaining damage
-                shield.value -= damage
-                return 0
+                shield.value -= event.value
+                event.value = 0
+                return event
             # Subtract shield value from damage and reset shield remain time
-            damage -= int(shield.value)
+            event.value -= shield.value
             shield.remain_time = 0
-        return damage
+        event.reduced_value = origin_damage - int(event.value)
+        return event
 
     def deal_with_ready_event(self, event: Event) -> Event | bool:
         if not self.is_survival:
